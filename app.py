@@ -7,6 +7,10 @@ cinema_goer = IMDb()
 @app.route('/')
 def index():
     return render_template('index.html')
+    
+@app.route('/aboutus')
+def about_us():
+    return render_template('aboutus.html')
 
 @app.route('/search_movies')
 def search_movies():
