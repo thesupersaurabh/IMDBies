@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}IMDBies - Search Movies or Series{% endblock %}
+
+{% block content %}
+    <h1 class="text-center mb-4">Search Movie or Series</h1>
+
+    <form id="movieForm">
+        <div class="form-row">
+            <div class="form-group col-md-12">
+                <label for="keyword">Enter Keyword:</label>
+                <input type="text" id="keyword" class="form-control" name="keyword" required>
+            </div>
+        </div>
+        
+    </form>
+
+    <ul id="movieList" class="list-unstyled d-flex flex-wrap"></ul>
+    <div id="movieDetails" class="mt-4"></div>
+
+    <script>
+        var typingTimer;
+        var doneTypingInterval = 500;
+        var selectedMediaType = 'movie';  // Default to 'movie'
+
+        document.getElementById('keyword').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+            }
+        });
+
+        document.getElementById('keyword').addEventListener('input', function() {
+            clearTimeout(typingTimer);
+            if (this.value) {
+                typingTimer = setTimeout(searchMovies, doneTypingInterval);
+            }
+        });
+
+        document.querySelectorAll('input[name="mediaType"]').forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                selectedMediaType = this.value;
+                searchMovies();
+            });
+        });
+
+        function searchMovies() {
+            var keyword = document.getElementById('keyword').value;
+            var url = '/search_movies?keyword=' + encodeURIComponent(keyword) + '&type=' + selectedMediaType;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        displayError(data.error);
+                    } else {
+                        displayMovieList(data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error searching movies:', error);
+                    displayError('An error occurred while searching for movies.');
+                });
+        }
+
+        function displayMovieList(movieData) {
+            var movieListContainer = document.getElementById('movieList');
+            movieListContainer.innerHTML = '';
+
+            if (movieData.length > 0) {
+                for (var i = 0; i < movieData.length; i++) {
+                    var listItem = document.createElement('li');
+                    listItem.classList.add('m-3');
+                    listItem.innerHTML = '<div class="card" style="width: 8rem;">' +
+                                         '<img src="' + movieData[i]['thumbnail'] + '" alt="' + movieData[i]['title'] + '" class="card-img-top" style="max-width: 100%; cursor: pointer;" onclick="getMovieDetails(\'' + movieData[i]['imdb_id'] + '\')">' +
+                                         '<div class="card-body">' +
+                                         '<h5 class="card-title">' + movieData[i]['title'] + '</h5>' +
+                                         '<p class="card-text">Year: ' + movieData[i]['year'] + '</p>' +
+                                         '<button class="btn btn-primary" onclick="watchMovie(\'' + movieData[i]['imdb_id'] + '\')">Watch</button>' +
+                                         '</div></div>';
+
+                    movieListContainer.appendChild(listItem);
+                }
+            } else {
+                displayError('No movies found.');
+            }
+        }
+
+        function getMovieDetails(imdbId) {
+            var url = '/get_movie_details?imdbId=' + imdbId;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    displayMovieDetails(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching movie details:', error);
+                    displayError('An error occurred while fetching movie details.');
+                });
+        }
+
+        function displayMovieDetails(movieDetails) {
+            var detailsContainer = document.getElementById('movieDetails');
+            detailsContainer.innerHTML = '';
+
+            if (movieDetails.error) {
+                displayError(movieDetails.error);
+            } else {
+                detailsContainer.innerHTML = '<p>Title: ' + movieDetails.title + '</p>' +
+                                             '<p>Year: ' + movieDetails.year + '</p>' +
+                                             '<p>Genres: ' + movieDetails.genres.join(', ') + '</p>' +
+                                             '<p>Directors: ' + movieDetails.directors.join(', ') + '</p>';
+            }
+        }
+
+        function watchMovie(imdbId) {
+            window.location.href = '/watch?imdbId=' + imdbId;
+        }
+
+        function displayError(errorMessage) {
+            var detailsContainer = document.getElementById('movieDetails');
+            detailsContainer.innerHTML = '<p style="color: red;">Error: ' + errorMessage + '</p>';
+        }
+    </script>
+{% endblock %}

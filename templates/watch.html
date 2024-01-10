@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}IMDBies - Watch Movie or Series{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Watch Movie or Series</h1>
+        <div id="watchDetails" class="text-center"></div>
+        <button id="reportIssueBtn" class="btn btn-danger mt-3">Report Issue: Video not working</button>
+    </div>
+
+    <script>
+        // Get the IMDb ID from the query parameters
+        var imdbId = new URLSearchParams(window.location.search).get('imdbId');
+
+        // Choose the embed domain
+        var embedDomain = 'vidsrc.to';  // Change this to your preferred domain
+
+        // Display the appropriate iframe for watching the movie
+        var watchDetailsContainer = document.getElementById('watchDetails');
+        var seasonNumber = 1;  // Default season number for movies
+        var episodeNumber = 1;  // Default episode number for movies
+        watchDetailsContainer.innerHTML = '<iframe src="https://' + embedDomain + '/embed/movie/tt' + imdbId + '" style="width: 100%; height: 500px;" frameborder="0" referrerpolicy="origin" allowfullscreen></iframe>';
+
+        // Button click event to report the issue
+        document.getElementById('reportIssueBtn').addEventListener('click', function () {
+            var isVideoNotWorking = confirm('Is the video not working?') ? true : false;
+            
+            if (isVideoNotWorking) {
+                var isSeries = confirm('Is it a series?') ? true : false;
+                
+                if (isSeries) {
+                    // If it's a series, prompt for season and episode numbers
+                    seasonNumber = prompt('Enter Season Number:');
+                    episodeNumber = prompt('Enter Episode Number:');
+
+                    watchDetailsContainer.innerHTML = '<iframe src="https://' + embedDomain + '/embed/tv/tt' + imdbId + '/' + seasonNumber + '/' + episodeNumber + '" style="width: 100%; height: 500px;" frameborder="0" referrerpolicy="origin" allowfullscreen></iframe>';
+                }
+            }
+        });
+    </script>
+{% endblock %}
