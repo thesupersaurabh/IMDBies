@@ -16,7 +16,7 @@ To enhance your movie-watching experience on IMDBies, consider the following:
 
 ## How to Use
 
-1. Visit [IMDBies](https://imdbies.onrender.com/).
+1. Visit [IMDBies](https://imdbies.onrender.com).
 2. Search for your favorite movies.
 3. Watch movies directly or report issues for a smoother experience.
 
@@ -26,11 +26,9 @@ Feel free to contribute to the project by reporting issues, suggesting improveme
 
 ## About the Creator
 
-IMDBies is a project by [Saurabh](https://github.com/thesupersaurabh) and ChatGPT. We hope you enjoy your movie time!
+IMDBies is a project by [Saurabh](https://linkedin.com/in/thesupersaurabh). I hope you enjoy your movie time!
 
-## License
 
-This project is licensed under the [MIT License](LICENSE).
 
 ## Acknowledgements
 
