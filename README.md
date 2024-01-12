@@ -1,11 +1,11 @@
 # IMDBies - Your Movie Streaming Destination
 
-IMDBies is a simple Flask-based website that allows you to watch your favorite movies online. Powered by IMDbPY for movie data and VidScript for embedded video streaming, this project is aimed at providing an easy and enjoyable movie-watching experience.
+IMDBies is a simple Flask-based website that allows you to watch your favorite movies online. Powered by IMDbPY for movie data and VidSrc for embedded video streaming, this project is aimed at providing an easy and enjoyable movie-watching experience.
 
 ## Features
 
 - Search for movies and get detailed information.
-- Watch movies seamlessly with VidScript embedded player.
+- Watch movies seamlessly with VidSrc embedded player.
 - Option to report issues, ensuring a better user experience.
 
 ## Tips for an Enhanced Experience
@@ -33,7 +33,7 @@ IMDBies is a project by [Saurabh](https://linkedin.com/in/thesupersaurabh). I ho
 ## Acknowledgements
 
 - IMDbPY
-- VidScript
+- VidSrc
 - Flask
 - Bootstrap
 
