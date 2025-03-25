@@ -2,6 +2,64 @@
 
 {% block title %}Watch {{ movie.title }} ({{ movie.year }}) - IMDBies{% endblock %}
 
+{% block meta %}
+    <meta name="description" content="{{ meta_description }}">
+    <meta name="keywords" content="{{ meta_keywords }}">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="video.movie">
+    <meta property="og:url" content="{{ canonical_url }}">
+    <meta property="og:title" content="Watch {{ movie.title }} ({{ movie.year }}) - IMDBies">
+    <meta property="og:description" content="{{ meta_description }}">
+    <meta property="og:image" content="{{ movie.thumbnail }}">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{ canonical_url }}">
+    <meta property="twitter:title" content="Watch {{ movie.title }} ({{ movie.year }}) - IMDBies">
+    <meta property="twitter:description" content="{{ meta_description }}">
+    <meta property="twitter:image" content="{{ movie.thumbnail }}">
+    
+    <!-- Schema.org markup for Google -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Movie",
+        "name": "{{ movie.title }}",
+        "dateCreated": "{{ movie.year }}",
+        "description": "{{ meta_description }}",
+        "image": "{{ movie.thumbnail }}",
+        "director": {% if movie.directors %}[
+            {% for director in movie.directors %}
+            {
+                "@type": "Person",
+                "name": "{{ director }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]{% else %}null{% endif %},
+        "actor": {% if movie.cast %}[
+            {% for actor in movie.cast %}
+            {
+                "@type": "Person",
+                "name": "{{ actor }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]{% else %}null{% endif %},
+        "genre": {{ movie.genres|tojson|safe if movie.genres else '[]' }},
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "{{ movie.rating }}",
+            "ratingCount": "{{ movie.votes }}",
+            "bestRating": "10",
+            "worstRating": "1"
+        }
+    }
+    </script>
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ canonical_url }}">
+{% endblock %}
+
 {% block description %}Watch {{ movie.title }} ({{ movie.year }}) online for free. {{ movie.plot|truncate(150) }}. Directed by {{ movie.directors|join(', ') }}. Starring {{ movie.cast|join(', ') }}.{% endblock %}
 
 {% block keywords %}{{ movie.title }}, {{ movie.year }}, watch online, stream, free, movie{% if movie.is_series %}, tv series, show{% endif %}, {{ movie.genres|join(', ') }}, IMDBies{% endblock %}

@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="description" content="{% block description %}IMDBies - Watch movies and TV shows online. Stream unlimited movies and TV series for free. High-quality streaming experience with no ads.{% endblock %}">
-    <meta name="keywords" content="{% block keywords %}movies, tv shows, streaming, watch online, free movies, IMDBies, movie streaming, tv series, watch movies online, free streaming{% endblock %}">
+    <meta name="keywords" content="{% block keywords %}movies online, free streaming, watch movies, TV shows, IMDb, streaming platform{% endblock %}">
     <meta name="robots" content="index, follow">
     <meta name="language" content="English">
     <meta name="revisit-after" content="1 day">
@@ -18,17 +19,17 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.url }}">
-    <meta property="og:title" content="{% block og_title %}IMDBies - Your Ultimate Movie Streaming Destination{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}Watch unlimited movies and TV shows online for free. High-quality streaming with no ads. The best place to stream your favorite content.{% endblock %}">
+    <meta property="og:title" content="{{ self.title() }}">
+    <meta property="og:description" content="{{ self.description() }}">
     <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='img/og-image.jpg', _external=True) }}{% endblock %}">
     <meta property="og:site_name" content="IMDBies">
     <meta property="og:locale" content="en_US">
     
     <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:card" content="summary">
     <meta property="twitter:url" content="{{ request.url }}">
-    <meta property="twitter:title" content="{% block twitter_title %}{{ self.og_title() }}{% endblock %}">
-    <meta property="twitter:description" content="{% block twitter_description %}{{ self.og_description() }}{% endblock %}">
+    <meta property="twitter:title" content="{{ self.title() }}">
+    <meta property="twitter:description" content="{{ self.description() }}">
     <meta property="twitter:image" content="{% block twitter_image %}{{ self.og_image() }}{% endblock %}">
     <meta name="twitter:creator" content="@IMDBies">
     
@@ -38,8 +39,8 @@
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
     
     <!-- Preconnect to external domains -->

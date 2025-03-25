@@ -13,6 +13,9 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from config import config
+from flask_sitemap import Sitemap
+import xml.etree.ElementTree as ET
+from urllib.parse import quote
 
 # Create Flask app with the correct configuration
 app = Flask(__name__)
@@ -38,12 +41,20 @@ cinema_goer = IMDb()
 # Cache to store commonly accessed movie details
 MOVIE_CACHE = {}
 # Cache for our dynamic sitemap
-SITEMAP_CACHE = {'last_updated': None, 'data': None}
+SITEMAP_CACHE = {
+    'last_updated': None,
+    'content': None,
+    'recently_viewed': [],
+    'new_releases': []
+}
 # Cache configuration
 CACHE_TIMEOUT = app.config['CACHE_DEFAULT_TIMEOUT']
 
 # Video source configuration
 VIDSRC_BASE_URL = app.config['VIDSRC_BASE_URL']
+
+# Initialize Sitemap
+ext = Sitemap(app=app)
 
 # Input validation helper
 def validate_imdb_id(imdb_id):
@@ -293,81 +304,107 @@ def get_similar_movies():
 
 @app.route('/watch')
 def watch():
+    """Movie/TV show watch page with rich meta tags"""
     imdb_id = request.args.get('imdbId')
     if not imdb_id:
-        return redirect('/')
+        return redirect(url_for('index'))
         
-    # Add 'tt' prefix if not present
-    if not imdb_id.startswith('tt'):
-        imdb_id = f'tt{imdb_id}'
-
     try:
-        # Get movie/series details from IMDb
-        ia = IMDb()
-        clean_id = imdb_id.replace('tt', '')
-        content = ia.get_movie(clean_id)
-        
-        print(f"Fetched content: {content.get('title')}, Kind: {content.get('kind')}")
-        
-        # Check if it's a TV Series using our helper function
-        is_series = is_tv_series(content)
-        
-        # Basic movie/series data
-        movie_data = {
-            'imdb_id': imdb_id,
-            'title': content.get('title', 'Untitled'),
-            'year': content.get('year', ''),
-            'genres': content.get('genres', []),
-            'directors': [director['name'] for director in content.get('directors', [])] if content.get('directors') else [],
-            'plot': content.get('plot outline', content.get('plot', [''])[0] if content.get('plot') else ''),
-            'rating': content.get('rating', ''),
-            'votes': content.get('votes', ''),
-            'cast': [cast['name'] for cast in content.get('cast', [])[:10]] if content.get('cast') else [],
-            'is_series': is_series,
-            'thumbnail': content.get('cover url', '').replace('._V1_SX300', '._V1_SX600') if content.get('cover url') else ''
-        }
-        
-        # Create title slug for future use
-        title_slug = slugify(movie_data['title'])
-        
-        # For TV Series: Add season and episode info
-        if is_series:
-            # Get season and episode from URL or set defaults
-            season = request.args.get('season', '1')
-            episode = request.args.get('episode', '1')
+        # Fetch movie details
+        movie = cinema_goer.get_movie(imdb_id.replace('tt', ''))
+        if not movie:
+            return redirect(url_for('index'))
             
-            movie_data['current_season'] = season
-            movie_data['current_episode'] = episode
-        
-        return render_template('watch.html', movie=movie_data)
+        # Prepare meta description
+        description = f"Watch {movie.get('title', '')} ({movie.get('year', '')}) online for free. "
+        if movie.get('plot outline'):
+            description += f"{movie.get('plot outline')[:150]}... "
+        if movie.get('directors'):
+            description += f"Directed by {', '.join(d['name'] for d in movie.get('directors')[:2])}. "
+        if movie.get('cast'):
+            description += f"Starring {', '.join(c['name'] for c in movie.get('cast')[:3])}."
+            
+        # Prepare meta keywords
+        keywords = [
+            movie.get('title', ''),
+            str(movie.get('year', '')),
+            'watch online',
+            'free streaming',
+            'HD quality'
+        ]
+        if movie.get('genres'):
+            keywords.extend(movie.get('genres'))
+        if movie.get('directors'):
+            keywords.extend(d['name'] for d in movie.get('directors')[:2])
+        if movie.get('cast'):
+            keywords.extend(c['name'] for c in movie.get('cast')[:3])
+            
+        return render_template('watch.html',
+            movie=movie,
+            meta_description=description,
+            meta_keywords=', '.join(keywords),
+            canonical_url=url_for('movie_page', 
+                imdb_id=imdb_id, 
+                slug=slugify(f"{movie.get('title', '')}-{movie.get('year', '')}"),
+                _external=True
+            )
+        )
     except Exception as e:
-        print(f"Error loading movie/series: {str(e)}")
-        traceback.print_exc()
-        return render_template('error.html', error=f"Error loading content: {str(e)}")
+        print(f"Error in watch page: {str(e)}")
+        return redirect(url_for('index'))
 
 # SEO-friendly URL route for movies
 @app.route('/movie/<string:imdb_id>/<string:slug>')
 def movie_page(imdb_id, slug):
-    """
-    SEO-friendly movie page that redirects to the watch page.
-    The slug is just for SEO and readability - we only use the IMDb ID.
-    """
-    return redirect(url_for('watch', imdbId=imdb_id))
+    """SEO-friendly movie page"""
+    try:
+        # Clean IMDb ID
+        imdb_id = validate_imdb_id(imdb_id)
+        if not imdb_id:
+            return redirect(url_for('index'))
+            
+        # Fetch movie details
+        movie = cinema_goer.get_movie(imdb_id.replace('tt', ''))
+        if not movie:
+            return redirect(url_for('index'))
+            
+        # Create correct slug
+        correct_slug = slugify(f"{movie.get('title', '')}-{movie.get('year', '')}")
+        
+        # Redirect if slug is incorrect (for SEO)
+        if slug != correct_slug:
+            return redirect(url_for('movie_page', imdb_id=imdb_id, slug=correct_slug))
+            
+        # Update sitemap with higher priority for newer movies
+        current_year = datetime.now().year
+        movie_year = int(movie.get('year', current_year))
+        priority = min(0.9, 0.5 + (1.0 if movie_year >= current_year else 0.0))
+        
+        update_sitemap_entry(imdb_id, movie.get('title', ''), movie.get('year', ''), priority)
+        
+        # Redirect to watch page
+        return redirect(url_for('watch', imdbId=imdb_id))
+        
+    except Exception as e:
+        print(f"Error in movie page: {str(e)}")
+        return redirect(url_for('index'))
 
-# Helper function to create URL-friendly slugs
+# Helper function for URL slugs
 def slugify(text):
     """Convert text to URL-friendly slug"""
+    if not text:
+        return 'watch'
     # Convert to lowercase
     text = text.lower()
     # Replace spaces with hyphens
-    text = re.sub(r'\s+', '-', text)
-    # Remove non-alphanumeric characters (except hyphens)
-    text = re.sub(r'[^a-z0-9\-]', '', text)
-    # Remove multiple hyphens
-    text = re.sub(r'\-+', '-', text)
+    text = text.replace(' ', '-')
+    # Remove special characters
+    text = re.sub(r'[^a-z0-9-]', '', text)
+    # Remove multiple consecutive hyphens
+    text = re.sub(r'-+', '-', text)
     # Remove leading/trailing hyphens
     text = text.strip('-')
-    return text
+    return text or 'watch'
 
 @app.route('/stream')
 def stream():
@@ -475,94 +512,91 @@ def search_combined():
         traceback.print_exc()
         return jsonify({'error': str(e)})
 
+def update_sitemap_entry(imdb_id, title, year, priority=0.5):
+    """Update sitemap with new movie entry"""
+    try:
+        movie_slug = slugify(f"{title}-{year}")
+        movie_url = url_for('movie_page', imdb_id=imdb_id, slug=movie_slug, _external=True)
+        
+        # Add to recently viewed with timestamp
+        current_time = datetime.now()
+        SITEMAP_CACHE['recently_viewed'].append({
+            'url': movie_url,
+            'title': title,
+            'lastmod': current_time.strftime('%Y-%m-%d'),
+            'priority': priority,
+            'timestamp': current_time
+        })
+        
+        # Keep only last 100 entries
+        SITEMAP_CACHE['recently_viewed'] = sorted(
+            SITEMAP_CACHE['recently_viewed'],
+            key=lambda x: x['timestamp'],
+            reverse=True
+        )[:100]
+        
+        # Invalidate sitemap cache
+        SITEMAP_CACHE['last_updated'] = None
+        
+    except Exception as e:
+        print(f"Error updating sitemap: {str(e)}")
+
 @app.route('/sitemap.xml')
 def sitemap():
-    """Generate a dynamic sitemap for SEO."""
-    # Check if we have a valid cached sitemap (less than 1 day old)
-    now = datetime.now()
-    if SITEMAP_CACHE['last_updated'] and (now - SITEMAP_CACHE['last_updated'] < timedelta(days=1)):
-        return Response(SITEMAP_CACHE['data'], mimetype='application/xml')
-    
+    """Generate dynamic sitemap"""
     try:
-        # Base URLs that are always in the sitemap
-        base_urls = [
-            {"loc": url_for('index', _external=True), "priority": 1.0, "changefreq": "daily"},
-            {"loc": url_for('watchlist', _external=True), "priority": 0.8, "changefreq": "weekly"},
-        ]
+        # Check if we have a cached version that's less than 1 hour old
+        if (SITEMAP_CACHE['last_updated'] and 
+            datetime.now() - SITEMAP_CACHE['last_updated'] < timedelta(hours=1) and
+            SITEMAP_CACHE['content']):
+            return Response(SITEMAP_CACHE['content'], mimetype='application/xml')
+
+        # Create new sitemap
+        urlset = ET.Element('urlset', xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
         
-        # Get top movies for sitemap (popular and highly rated)
-        popular_movies = []
-        for keyword in ["best movies", "popular movies", "top rated", "2024"]:
-            try:
-                results = cinema_goer.search_movie(keyword, results=10)
-                for movie in results:
-                    movie_id = movie.movieID
-                    if not any(m.get('imdb_id') == movie_id for m in popular_movies):
-                        popular_movies.append({
-                            "imdb_id": movie_id,
-                            "title": movie.get('title', 'Untitled'),
-                            "priority": 0.7,
-                            "changefreq": "monthly"
-                        })
-                        
-                        # Cache this movie in our application cache
-                        if movie_id not in MOVIE_CACHE:
-                            MOVIE_CACHE[movie_id] = {
-                                "imdb_id": movie_id,
-                                "title": movie.get('title', 'Untitled'),
-                                "year": movie.get('year', ''),
-                                "time_added": now
-                            }
-            except Exception as e:
-                print(f"Error fetching movies for sitemap with keyword '{keyword}': {str(e)}")
+        # Add static pages
+        static_pages = ['index', 'watchlist', 'about', 'privacy']
+        for page in static_pages:
+            url = ET.SubElement(urlset, 'url')
+            loc = ET.SubElement(url, 'loc')
+            loc.text = url_for(page, _external=True)
+            lastmod = ET.SubElement(url, 'lastmod')
+            lastmod.text = datetime.now().strftime('%Y-%m-%d')
+            priority = ET.SubElement(url, 'priority')
+            priority.text = '0.8' if page == 'index' else '0.6'
         
-        # Generate URL list including movie watch pages
-        urls = []
-        urls.extend(base_urls)
-        for movie in popular_movies[:50]:  # Limit to top 50 movies
-            urls.append({
-                "loc": url_for('watch', imdbId=f"tt{movie['imdb_id']}", _external=True),
-                "priority": movie['priority'],
-                "changefreq": movie['changefreq']
-            })
-            
-        # Build XML
-        xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
-        xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        # Add recently viewed movies
+        for movie in SITEMAP_CACHE['recently_viewed']:
+            url = ET.SubElement(urlset, 'url')
+            loc = ET.SubElement(url, 'loc')
+            loc.text = movie['url']
+            lastmod = ET.SubElement(url, 'lastmod')
+            lastmod.text = movie['lastmod']
+            priority = ET.SubElement(url, 'priority')
+            priority.text = str(movie['priority'])
         
-        for url in urls:
-            xml += '  <url>\n'
-            xml += f'    <loc>{url["loc"]}</loc>\n'
-            xml += f'    <changefreq>{url["changefreq"]}</changefreq>\n'
-            xml += f'    <priority>{url["priority"]}</priority>\n'
-            xml += f'    <lastmod>{now.strftime("%Y-%m-%d")}</lastmod>\n'
-            xml += '  </url>\n'
-            
-        xml += '</urlset>'
+        # Generate XML
+        sitemap_content = ET.tostring(urlset, encoding='unicode')
         
-        # Cache the sitemap
-        SITEMAP_CACHE['data'] = xml
-        SITEMAP_CACHE['last_updated'] = now
+        # Cache the result
+        SITEMAP_CACHE['content'] = sitemap_content
+        SITEMAP_CACHE['last_updated'] = datetime.now()
         
-        return Response(xml, mimetype='application/xml')
+        return Response(sitemap_content, mimetype='application/xml')
     except Exception as e:
         print(f"Error generating sitemap: {str(e)}")
-        traceback.print_exc()
-        # Return empty sitemap in case of error
-        xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'
-        return Response(xml, mimetype='application/xml')
+        return Response(status=500)
 
 @app.route('/robots.txt')
-def robots_txt():
-    """Generate robots.txt file for SEO"""
-    robots_content = """User-agent: *
+def robots():
+    """Generate robots.txt"""
+    robots_content = f"""User-agent: *
 Allow: /
-Disallow: /stream
-Disallow: /admin
-Disallow: /static
+Sitemap: {url_for('sitemap', _external=True)}
 
-Sitemap: {}
-""".format(url_for('sitemap', _external=True))
+# Optimize crawling
+Crawl-delay: 1
+"""
     return Response(robots_content, mimetype='text/plain')
 
 # Custom error handlers
