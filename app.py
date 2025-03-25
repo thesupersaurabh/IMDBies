@@ -179,7 +179,7 @@ def search_movies():
 @cache_response
 def get_movie_details():
     imdb_id = request.args.get('imdbId')
-    
+
     # Validate IMDb ID
     imdb_id = validate_imdb_id(imdb_id)
     if not imdb_id:
@@ -315,37 +315,54 @@ def watch():
         if not movie:
             return redirect(url_for('index'))
             
+        # Convert movie object to serializable dictionary
+        movie_data = {
+            'imdb_id': imdb_id,
+            'title': movie.get('title', ''),
+            'year': movie.get('year', ''),
+            'plot': movie.get('plot outline', movie.get('plot', [''])[0] if movie.get('plot') else ''),
+            'rating': movie.get('rating', ''),
+            'votes': movie.get('votes', ''),
+            'directors': [director['name'] for director in movie.get('directors', [])] if movie.get('directors') else [],
+            'cast': [cast['name'] for cast in movie.get('cast', [])[:5]] if movie.get('cast') else [],
+            'genres': movie.get('genres', []),
+            'is_series': is_tv_series(movie),
+            'thumbnail': movie.get('cover url', '').replace('._V1_SX300', '._V1_SX600') if movie.get('cover url') else '',
+            'current_season': request.args.get('season', '1'),
+            'current_episode': request.args.get('episode', '1')
+        }
+            
         # Prepare meta description
-        description = f"Watch {movie.get('title', '')} ({movie.get('year', '')}) online for free. "
-        if movie.get('plot outline'):
-            description += f"{movie.get('plot outline')[:150]}... "
-        if movie.get('directors'):
-            description += f"Directed by {', '.join(d['name'] for d in movie.get('directors')[:2])}. "
-        if movie.get('cast'):
-            description += f"Starring {', '.join(c['name'] for c in movie.get('cast')[:3])}."
+        description = f"Watch {movie_data['title']} ({movie_data['year']}) online for free. "
+        if movie_data['plot']:
+            description += f"{movie_data['plot'][:150]}... "
+        if movie_data['directors']:
+            description += f"Directed by {', '.join(movie_data['directors'][:2])}. "
+        if movie_data['cast']:
+            description += f"Starring {', '.join(movie_data['cast'][:3])}."
             
         # Prepare meta keywords
         keywords = [
-            movie.get('title', ''),
-            str(movie.get('year', '')),
+            movie_data['title'],
+            str(movie_data['year']),
             'watch online',
             'free streaming',
             'HD quality'
         ]
-        if movie.get('genres'):
-            keywords.extend(movie.get('genres'))
-        if movie.get('directors'):
-            keywords.extend(d['name'] for d in movie.get('directors')[:2])
-        if movie.get('cast'):
-            keywords.extend(c['name'] for c in movie.get('cast')[:3])
+        if movie_data['genres']:
+            keywords.extend(movie_data['genres'])
+        if movie_data['directors']:
+            keywords.extend(movie_data['directors'][:2])
+        if movie_data['cast']:
+            keywords.extend(movie_data['cast'][:3])
             
         return render_template('watch.html',
-            movie=movie,
+            movie=movie_data,
             meta_description=description,
             meta_keywords=', '.join(keywords),
             canonical_url=url_for('movie_page', 
                 imdb_id=imdb_id, 
-                slug=slugify(f"{movie.get('title', '')}-{movie.get('year', '')}"),
+                slug=slugify(f"{movie_data['title']}-{movie_data['year']}"),
                 _external=True
             )
         )
