@@ -1,42 +1,1043 @@
 {% extends "base.html" %}
 
-{% block title %}IMDBies - Your Movie Streaming Destination{% endblock %}
+{% block title %}Watch {{ movie.title }} ({{ movie.year }}) - IMDBies{% endblock %}
+
+{% block description %}Watch {{ movie.title }} ({{ movie.year }}) online for free. {{ movie.plot|truncate(150) }}. Directed by {{ movie.directors|join(', ') }}. Starring {{ movie.cast|join(', ') }}.{% endblock %}
+
+{% block keywords %}{{ movie.title }}, {{ movie.year }}, watch online, stream, free, movie{% if movie.is_series %}, tv series, show{% endif %}, {{ movie.genres|join(', ') }}, IMDBies{% endblock %}
+
+{% block og_title %}Watch {{ movie.title }} ({{ movie.year }}) - IMDBies{% endblock %}
+{% block og_description %}Watch {{ movie.title }} ({{ movie.year }}) online. {{ movie.plot|truncate(200) }}{% endblock %}
+{% block og_image %}{{ movie.thumbnail }}{% endblock %}
+
+{% block twitter_title %}Watch {{ movie.title }} ({{ movie.year }}) - IMDBies{% endblock %}
+{% block twitter_description %}Watch {{ movie.title }} ({{ movie.year }}) online. {{ movie.plot|truncate(200) }}{% endblock %}
+{% block twitter_image %}{{ movie.thumbnail }}{% endblock %}
 
 {% block content %}
-    <div class="container mt-5">
-        <h1 class="text-center mb-4">IMDBies - Your Movie Streaming Destination</h1>
-        <div id="watchDetails" class="text-center"></div>
-        <button id="reportIssueBtn" class="btn btn-danger mt-3">Report Issue: Video not working or change series's episode </button>
+<div class="movie-header py-4">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="/" class="text-decoration-none">
+                        <i class="fas fa-home me-1"></i>Home
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">{{ movie.title }}</li>
+            </ol>
+        </nav>
+        
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="display-5 mb-3 text-gradient">{{ movie.title }}</h1>
+                <div class="d-flex align-items-center mb-4 flex-wrap gap-3">
+                    <span class="badge bg-primary">
+                        <i class="fas fa-star me-1"></i>{{ movie.rating|default('N/A') }}/10
+                    </span>
+                    <span class="badge bg-secondary">
+                        <i class="fas fa-users me-1"></i>{{ movie.votes|default('0') }} votes
+                    </span>
+                    <span class="badge bg-info">
+                        <i class="fas fa-calendar me-1"></i>{{ movie.year|default('N/A') }}
+                    </span>
+                    {% if movie.is_series %}
+                    <span class="badge bg-success">
+                        <i class="fas fa-tv me-1"></i>TV Series
+                    </span>
+                    {% endif %}
+                    {% for genre in movie.genres|default([]) %}
+                    <span class="badge bg-light text-dark">{{ genre }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <div class="d-flex justify-content-lg-end gap-2">
+                    <button class="btn btn-outline-primary" onclick="toggleWatchlistItem()">
+                        <i class="fas fa-bookmark me-2"></i><span id="watchlistBtnText">Add to Watchlist</span>
+                    </button>
+                    <a href="/watchlist" class="btn btn-primary">
+                        <i class="fas fa-list me-2"></i>My Watchlist
+                        <span id="watchlistCount" class="badge bg-light text-dark ms-1" style="display: none;">0</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="row mb-5">
+        <div class="col-lg-8">
+            <div id="player" class="ratio ratio-16x9 mb-4">
+                <div class="d-flex align-items-center justify-content-center bg-dark rounded">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-light mb-0">Loading player...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="movie-info mb-4">
+                <h1 class="h3 mb-3" id="movieTitle">{{ movie.title }}</h1>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge bg-primary">
+                        <i class="fas fa-star me-1"></i>{{ movie.rating|default('N/A') }}/10
+                    </span>
+                    <span class="badge bg-secondary">
+                        <i class="fas fa-users me-1"></i>{{ movie.votes|default('0') }} votes
+                    </span>
+                    <span class="badge bg-info">
+                        <i class="fas fa-calendar me-1"></i>{{ movie.year|default('N/A') }}
+                    </span>
+                    {% if movie.is_series %}
+                    <span class="badge bg-success">
+                        <i class="fas fa-tv me-1"></i>TV Series
+                    </span>
+                    {% endif %}
+                </div>
+
+                {% if movie.is_series %}
+                <div class="series-controls mb-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-12 mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="input-group input-group-sm" style="max-width: 160px;">
+                                    <span class="input-group-text bg-dark text-white border-dark">Season</span>
+                                    <button class="btn btn-dark" type="button" onclick="changeSeasonValue(-1)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <input type="number" class="form-control bg-dark text-white border-dark text-center" id="seasonInput" min="1" value="{{ movie.current_season }}" onchange="updateEpisodesManually()">
+                                    <button class="btn btn-dark" type="button" onclick="changeSeasonValue(1)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div class="input-group input-group-sm" style="max-width: 160px;">
+                                    <span class="input-group-text bg-dark text-white border-dark">Episode</span>
+                                    <button class="btn btn-dark" type="button" onclick="changeEpisodeValue(-1)">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <input type="number" class="form-control bg-dark text-white border-dark text-center" id="episodeInput" min="1" value="{{ movie.current_episode }}" onchange="loadEpisodeManually()">
+                                    <button class="btn btn-dark" type="button" onclick="changeEpisodeValue(1)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <button class="btn btn-danger" onclick="playPreviousEpisode()">
+                            <i class="fas fa-step-backward me-1"></i> Previous
+                        </button>
+                        <button class="btn btn-danger" onclick="playNextEpisode()">
+                            Next <i class="fas fa-step-forward ms-1"></i>
+                        </button>
+                    </div>
+
+                    <div class="episode-info mt-3">
+                        <h6 class="text-muted mb-2">Current Episode</h6>
+                        <h5 class="mb-2" id="episodeTitle">Season {{ movie.current_season }}, Episode {{ movie.current_episode }}</h5>
+                        <p class="mb-0 small text-muted" id="episodePlot">
+                            No plot available for this episode.
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">Genres</h6>
+                    <div class="d-flex flex-wrap gap-1" id="movieGenres"></div>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">Plot</h6>
+                    <p class="mb-0">{{ movie.plot }}</p>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">Cast</h6>
+                    <p class="mb-0" id="movieCast"></p>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-muted mb-2">Directors</h6>
+                    <p class="mb-0" id="movieDirectors"></p>
+                </div>
+                <div class="d-flex mt-4">
+                    
+                    <a id="imdbRateLink" class="btn btn-warning" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-star me-2"></i>Rate on IMDb
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script>
-        // Get the IMDb ID from the query parameters
-        var imdbId = new URLSearchParams(window.location.search).get('imdbId');
+    <div class="similar-movies-section mb-5">
+        <h4 class="d-flex align-items-center mb-4">
+            <i class="fas fa-film text-primary me-2"></i>You may also like
+        </h4>
+        <div class="similar-movies-container">
+            <div class="similar-movies row g-3" id="similarMovies">
+                <!-- Similar movies will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
 
-        // Choose the embed domain
-        var embedDomain = 'vidsrc.xyz';  // Change this to your preferred domain
+<!-- Loading Spinner -->
+<div class="loading-spinner" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
 
-        // Display the appropriate iframe for watching the movie
-        var watchDetailsContainer = document.getElementById('watchDetails');
-        var seasonNumber = 1;  // Default season number for movies
-        var episodeNumber = 1;  // Default episode number for movies
-        watchDetailsContainer.innerHTML = '<iframe src="https://' + embedDomain + '/embed/movie/tt' + imdbId + '" style="width: 100%; height: 500px;" frameborder="0" referrerpolicy="origin" allowfullscreen></iframe>';
+<!-- Report Issue Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>Report Issue
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="issueType" class="form-label">Issue Type</label>
+                    <select class="form-select" id="issueType">
+                        <option value="video">Video not playing</option>
+                        <option value="quality">Poor video quality</option>
+                        <option value="audio">Audio issues</option>
+                        <option value="subtitle">Subtitle issues</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="issueDescription" class="form-label">Description</label>
+                    <textarea class="form-control" id="issueDescription" rows="3" placeholder="Please describe the issue..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitIssue()">Submit Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-        // Button click event to report the issue
-        document.getElementById('reportIssueBtn').addEventListener('click', function () {
-            var isVideoNotWorking = confirm('Is the video not working?') ? true : false;
-            
-            if (isVideoNotWorking) {
-                var isSeries = confirm('Is it a series?') ? true : false;
-                
-                if (isSeries) {
-                    // If it's a series, prompt for season and episode numbers
-                    seasonNumber = prompt('Enter Season Number:');
-                    episodeNumber = prompt('Enter Episode Number:');
+{% block scripts %}
+<!-- Data initialization script -->
+<script>
+    // Using safer string literals to directly embed the JSON as a JavaScript object
+    var movieData = JSON.parse('{{ movie|tojson|safe }}');
+    var watchlist = [];
+    var fallbackImageSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='450' viewBox='0 0 300 450'%3E%3Crect width='300' height='450' fill='%23333'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='24' fill='%23fff' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
+    
+    // Try to load watchlist
+    try {
+        var savedWatchlist = localStorage.getItem('watchlist');
+        if (savedWatchlist) {
+            watchlist = JSON.parse(savedWatchlist);
+        }
+    } catch (e) {
+        console.error('Error loading watchlist:', e);
+    }
+</script>
 
-                    watchDetailsContainer.innerHTML = '<iframe src="https://' + embedDomain + '/embed/tv/tt' + imdbId + '/' + seasonNumber + '/' + episodeNumber + '" style="width: 100%; height: 500px;" frameborder="0" referrerpolicy="origin" allowfullscreen></iframe>';
-                }
+<!-- Main application script -->
+<script>
+    // Function to handle image loading errors
+    function handleImageError(img) {
+        img.src = fallbackImageSrc;
+        img.onerror = null; // Prevent infinite loop
+        return true;
+    }
+    
+    // Listen for watchlist changes from other tabs/windows
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'watchlist') {
+            try {
+                watchlist = JSON.parse(e.newValue || '[]');
+                updateWatchlistButton();
+                updateWatchlistCount();
+            } catch (e) {
+                console.error('Error processing storage event');
             }
+        }
+    });
+    
+    // Initialize everything when the document is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Document loaded, initializing UI...');
+        
+        // Set onerror handler for all images
+        document.querySelectorAll('img').forEach(function(img) {
+            img.onerror = function() {
+                return handleImageError(this);
+            };
         });
-    </script>
+        
+        // Check if movie data is available
+        if (!movieData) {
+            console.error('Movie data not available');
+            return;
+        }
+        
+        // Initialize UI elements
+        updateWatchlistCount();
+        updateWatchlistButton();
+        
+        // Initialize player and movie details
+        initializePlayer();
+        
+        // For series, initialize episode selectors
+        if (movieData.is_series) {
+            // Delay to ensure DOM is fully loaded
+            setTimeout(initializeEpisodeSelectors, 100);
+        }
+        
+        // Load similar movies
+        if (movieData.imdb_id) {
+            loadSimilarMovies(movieData.imdb_id);
+            // Set IMDb rate link
+            const imdbRateLink = document.getElementById('imdbRateLink');
+            if (imdbRateLink) {
+                imdbRateLink.href = `https://www.imdb.com/title/${movieData.imdb_id}`;
+                imdbRateLink.className = "btn btn-warning w-100";
+            }
+        }
+    });
+
+    function changeSeasonValue(delta) {
+        const seasonInput = document.getElementById('seasonInput');
+        if (!seasonInput) return;
+        
+        let newValue = parseInt(seasonInput.value || 1) + delta;
+        if (newValue < 1) newValue = 1;
+        
+        seasonInput.value = newValue;
+        updateEpisodesManually();
+    }
+
+    function changeEpisodeValue(delta) {
+        const episodeInput = document.getElementById('episodeInput');
+        if (!episodeInput) return;
+        
+        let newValue = parseInt(episodeInput.value || 1) + delta;
+        if (newValue < 1) newValue = 1;
+        
+        episodeInput.value = newValue;
+        loadEpisodeManually();
+    }
+
+    function updateEpisodesManually() {
+        // Reset episode to 1 when season changes
+        const episodeInput = document.getElementById('episodeInput');
+        if (episodeInput) {
+            episodeInput.value = 1;
+        }
+        
+        loadEpisodeManually();
+    }
+
+    function loadEpisodeManually() {
+        const seasonInput = document.getElementById('seasonInput');
+        const episodeInput = document.getElementById('episodeInput');
+        
+        if (!seasonInput || !episodeInput) return;
+        
+        const season = seasonInput.value || 1;
+        const episode = episodeInput.value || 1;
+        
+        // Update the episode title
+        const episodeTitle = document.getElementById('episodeTitle');
+        if (episodeTitle) {
+            episodeTitle.textContent = `Season ${season}, Episode ${episode}`;
+        }
+        
+        // Update the player
+        updatePlayer(season, episode);
+        
+        // Update URL without refreshing
+        updateUrl(season, episode);
+    }
+
+    function playNextEpisode() {
+        const episodeInput = document.getElementById('episodeInput');
+        if (!episodeInput) return;
+        
+        let newValue = parseInt(episodeInput.value || 1) + 1;
+        episodeInput.value = newValue;
+        loadEpisodeManually();
+    }
+
+    function playPreviousEpisode() {
+        const episodeInput = document.getElementById('episodeInput');
+        if (!episodeInput) return;
+        
+        let newValue = parseInt(episodeInput.value || 1) - 1;
+        if (newValue < 1) {
+            // Try to go to previous season, last episode
+            const seasonInput = document.getElementById('seasonInput');
+            if (seasonInput && parseInt(seasonInput.value || 1) > 1) {
+                seasonInput.value = parseInt(seasonInput.value || 1) - 1;
+                // Assume 10 episodes in previous season as a reasonable default
+                episodeInput.value = 10;
+                loadEpisodeManually();
+            }
+        } else {
+            episodeInput.value = newValue;
+            loadEpisodeManually();
+        }
+    }
+
+    function updatePlayer(season, episode) {
+        const player = document.getElementById('player');
+        if (!player || !movieData) return;
+        
+        console.log('Updating player for:', season, episode);
+        
+        player.innerHTML = `
+            <div class="ratio ratio-16x9">
+                <iframe src="/stream?imdbId=${movieData.imdb_id}&season=${season}&episode=${episode}"
+                        allowfullscreen 
+                        class="rounded"
+                        style="background: #000;"></iframe>
+            </div>
+        `;
+    }
+
+    function updateUrl(season, episode) {
+        const url = new URL(window.location);
+        url.searchParams.set('season', season);
+        url.searchParams.set('episode', episode);
+        window.history.pushState({}, '', url);
+    }
+
+    function initializeEpisodeSelectors() {
+        console.log('Initializing episode selectors');
+        
+        // Update season input field with current value
+        const seasonInput = document.getElementById('seasonInput');
+        if (seasonInput) {
+            seasonInput.value = movieData.current_season || 1;
+        }
+        
+        // Update episode input field with current value
+        const episodeInput = document.getElementById('episodeInput');
+        if (episodeInput) {
+            episodeInput.value = movieData.current_episode || 1;
+        }
+        
+        // Update episode title display
+        updateEpisodeInfo();
+    }
+
+    function updateEpisodeInfo() {
+        const season = document.getElementById('seasonInput')?.value || movieData.current_season || 1;
+        const episode = document.getElementById('episodeInput')?.value || movieData.current_episode || 1;
+        
+        const episodeTitle = document.getElementById('episodeTitle');
+        if (episodeTitle) {
+            episodeTitle.textContent = `Season ${season}, Episode ${episode}`;
+        }
+        
+        // Try to update episode plot if available
+        const episodePlot = document.getElementById('episodePlot');
+        if (episodePlot) {
+            let plot = 'Episode information not available';
+            
+            // Try to get episode plot from movieData
+            try {
+                if (movieData.seasons && 
+                    movieData.seasons[season] && 
+                    movieData.seasons[season].length > 0) {
+                    
+                    const episodeData = movieData.seasons[season].find(ep => ep.episode === episode);
+                    if (episodeData && episodeData.plot) {
+                        plot = episodeData.plot;
+                    }
+                }
+            } catch (e) {
+                console.error('Error getting episode plot:', e);
+            }
+            
+            episodePlot.textContent = plot;
+        }
+    }
+
+    function initializePlayer() {
+        if (!movieData) return;
+        
+        const player = document.getElementById('player');
+        if (!player) return;
+        
+        let streamUrl;
+        if (movieData.is_series) {
+            const season = document.getElementById('seasonInput')?.value || movieData.current_season || 1;
+            const episode = document.getElementById('episodeInput')?.value || movieData.current_episode || 1;
+            streamUrl = `/stream?imdbId=${movieData.imdb_id}&season=${season}&episode=${episode}`;
+        } else {
+            streamUrl = `/stream?imdbId=${movieData.imdb_id}`;
+        }
+        
+        player.innerHTML = `
+            <div class="ratio ratio-16x9">
+                <iframe src="${streamUrl}" 
+                        allowfullscreen 
+                        class="rounded"
+                        style="background: #000;"></iframe>
+            </div>
+        `;
+    }
+
+    function updateWatchlistCount() {
+        const count = watchlist.length;
+        const countElement = document.getElementById('watchlistCount');
+        if (countElement) {
+            countElement.textContent = count;
+            countElement.style.display = count > 0 ? 'flex' : 'none';
+        }
+    }
+
+    function addToWatchlist(movie) {
+        // Check if movie is already in watchlist
+        const exists = watchlist.some(item => item.imdb_id === movie.imdb_id);
+        if (!exists) {
+            watchlist.push(movie);
+            localStorage.setItem('watchlist', JSON.stringify(watchlist));
+            
+            // Show notification
+            showNotification(`Added "${movie.title}" to your watchlist!`);
+            
+            // Update watchlist button and count
+            updateWatchlistButton();
+            updateWatchlistCount();
+        }
+    }
+
+    function removeFromWatchlist(imdbId) {
+        const index = watchlist.findIndex(item => item.imdb_id === imdbId);
+        if (index !== -1) {
+            const movie = watchlist[index];
+            watchlist.splice(index, 1);
+            localStorage.setItem('watchlist', JSON.stringify(watchlist));
+            
+            // Show notification
+            showNotification(`Removed "${movie.title}" from your watchlist`);
+            
+            // Update watchlist button and count
+            updateWatchlistButton();
+            updateWatchlistCount();
+        }
+    }
+
+    function updateWatchlistButton() {
+        if (!movieData) return;
+        
+        const watchlistButton = document.getElementById('watchlistBtnText');
+        if (watchlistButton) {
+            const exists = watchlist.some(item => item.imdb_id === movieData.imdb_id);
+            
+            if (exists) {
+                watchlistButton.textContent = 'Remove from Watchlist';
+                watchlistButton.classList.remove('btn-light');
+                watchlistButton.classList.add('btn-danger');
+                watchlistButton.onclick = function() {
+                    removeFromWatchlist(movieData.imdb_id);
+                };
+            } else {
+                watchlistButton.textContent = 'Add to Watchlist';
+                watchlistButton.classList.remove('btn-danger');
+                watchlistButton.classList.add('btn-light');
+                watchlistButton.onclick = function() {
+                    addToWatchlist(movieData);
+                };
+            }
+        }
+    }
+
+    function showNotification(message) {
+        const notificationContainer = document.getElementById('notificationContainer');
+        if (!notificationContainer) return;
+        
+        const notificationId = 'notification-' + Date.now();
+        const notification = document.createElement('div');
+        notification.className = 'notification show';
+        notification.id = notificationId;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas fa-check-circle text-success me-2"></i>
+                <span>${message}</span>
+            </div>
+            <button class="notification-close" onclick="closeNotification('${notificationId}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        notificationContainer.appendChild(notification);
+        
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+            closeNotification(notificationId);
+        }, 3000);
+    }
+
+    function closeNotification(id) {
+        const notification = document.getElementById(id);
+        if (notification) {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }
+    }
+
+    async function loadSimilarMovies(imdbId) {
+        try {
+            console.log('Loading similar movies for:', imdbId);
+            const response = await fetch(`/get_similar_movies?imdbId=${imdbId}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                console.error('Error loading similar movies:', data.error);
+                return;
+            }
+
+            console.log('Received similar movies:', data.length);
+            const similarMoviesContainer = document.getElementById('similarMovies');
+            if (!similarMoviesContainer) {
+                console.error('Similar movies container not found');
+                return;
+            }
+            
+            similarMoviesContainer.innerHTML = '';
+
+            // Limit to 10 similar movies
+            const limitedData = data.slice(0, 10);
+
+            limitedData.forEach(movie => {
+                if (!movie || !movie.imdb_id) return;
+
+                const thumbnailUrl = movie.thumbnail ? movie.thumbnail.replace(/\._V1_.*\.jpg$/, '._V1_SX300.jpg') : '';
+                
+                const col = document.createElement('div');
+                col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+                col.innerHTML = `
+                    <div class="similar-movie-card">
+                        <img src="${thumbnailUrl || fallbackImageSrc}" 
+                             alt="${movie.title}"
+                             loading="lazy"
+                             onerror="handleImageError(this)">
+                        <div class="card-body">
+                            <h6 class="card-title text-truncate">${movie.title}</h6>
+                            <p class="text-muted mb-2">${movie.year || 'N/A'}</p>
+                            <a href="/watch?imdbId=${movie.imdb_id}" class="btn btn-watch">
+                                <i class="fas fa-play me-1"></i>Watch
+                            </a>
+                        </div>
+                    </div>
+                `;
+                similarMoviesContainer.appendChild(col);
+            });
+        } catch (error) {
+            console.error('Error loading similar movies:', error);
+        }
+    }
+
+    function toggleFullscreen() {
+        const videoPlayer = document.getElementById('videoPlayer');
+        if (!document.fullscreenElement) {
+            if (videoPlayer.requestFullscreen) {
+                videoPlayer.requestFullscreen();
+            } else if (videoPlayer.webkitRequestFullscreen) {
+                videoPlayer.webkitRequestFullscreen();
+            } else if (videoPlayer.msRequestFullscreen) {
+                videoPlayer.msRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+    }
+
+    function reportIssue() {
+        const reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
+        reportModal.show();
+    }
+
+    function submitIssue() {
+        const issueType = document.getElementById('issueType').value;
+        const description = document.getElementById('issueDescription').value.trim();
+        
+        if (!description) {
+            alert('Please provide a description of the issue.');
+            return;
+        }
+
+        // Here you would typically send the report to your backend
+        console.log('Issue reported:', { type: issueType, description });
+        
+        // Close the modal
+        const reportModal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
+        reportModal.hide();
+        
+        // Show success message
+        alert('Thank you for reporting the issue. We will look into it.');
+    }
+</script>
+
+<style>
+    .movie-header {
+        background: rgba(26, 29, 36, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .breadcrumb-item a {
+        color: var(--text-primary);
+    }
+
+    .breadcrumb-item.active {
+        color: var(--text-muted);
+    }
+
+    .video-container {
+        background: rgba(26, 29, 36, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .video-controls {
+        padding: 1rem;
+        background: rgba(26, 29, 36, 0.95);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .movie-info {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+
+    .text-gradient {
+        background: linear-gradient(45deg, var(--primary-color), #ff4b2b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .form-control, .form-select {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text-primary);
+    }
+
+    .form-control:focus, .form-select:focus {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: var(--primary-color);
+        color: var(--text-primary);
+        box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
+    }
+
+    @media (max-width: 768px) {
+        .video-controls {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .video-controls .btn {
+            width: 100%;
+        }
+    }
+
+    .similar-movies-section {
+        position: relative;
+        margin-top: 2rem;
+    }
+
+    .similar-movies-scroll {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding: 0.5rem 0;
+    }
+
+    .similar-movies-scroll::-webkit-scrollbar {
+        display: none;
+    }
+
+    .similar-movies-container {
+        display: flex;
+        gap: 1rem;
+        padding: 0.5rem;
+    }
+
+    .movie-card {
+        flex: 0 0 160px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .movie-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .movie-card img {
+        width: 100%;
+        height: 240px;
+        object-fit: cover;
+    }
+
+    .movie-card .card-body {
+        padding: 0.75rem;
+    }
+
+    .movie-card .card-title {
+        font-size: 0.85rem;
+        margin-bottom: 0.3rem;
+        line-height: 1.3;
+    }
+
+    .movie-card .text-muted {
+        font-size: 0.75rem;
+    }
+
+    .movie-card .btn {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+    }
+
+    .about-section .card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .video-container {
+        background: #000;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .similar-movies-container {
+        position: relative;
+    }
+
+    .similar-movies {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0 -0.5rem;
+    }
+
+    .similar-movie-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        height: 100%;
+        position: relative;
+    }
+
+    .similar-movie-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .similar-movie-card img {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        object-position: center;
+    }
+
+    .similar-movie-card .card-body {
+        padding: 1rem;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        color: white;
+    }
+
+    .similar-movie-card .card-title {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        color: white;
+    }
+
+    .similar-movie-card .text-muted {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+
+    .similar-movie-card .btn-watch {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+    .similar-movie-card .btn-watch:hover {
+        transform: scale(1.05);
+        background: var(--primary-color-hover);
+    }
+
+    .series-controls {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .form-select {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+    }
+
+    .form-select:focus {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: var(--primary-color);
+        color: var(--text-primary);
+        box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
+    }
+
+    .episode-info {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    /* Notification styles */
+    .notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(26, 29, 36, 0.95);
+        border-left: 4px solid var(--primary-color);
+        border-radius: 4px;
+        padding: 0;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        z-index: 9999;
+        max-width: 300px;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    
+    .notification.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .notification.success {
+        border-left-color: #28a745;
+    }
+    
+    .notification.info {
+        border-left-color: #17a2b8;
+    }
+    
+    .notification-content {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+    }
+    
+    .notification-content i {
+        font-size: 1.2rem;
+        margin-right: 10px;
+    }
+    
+    .notification.success i {
+        color: #28a745;
+    }
+    
+    .notification.info i {
+        color: #17a2b8;
+    }
+</style>
+
+<!-- Schema.org structured data for SEO -->
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": {% if movie.is_series %}"TVSeries"{% else %}"Movie"{% endif %},
+    "name": "{{ movie.title }}",
+    "description": "{{ movie.plot }}",
+    {% if movie.thumbnail %}
+    "image": "{{ movie.thumbnail }}",
+    {% endif %}
+    "datePublished": "{{ movie.year }}-01-01",
+    {% if movie.rating %}
+    "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "{{ movie.rating }}",
+        "bestRating": "10",
+        "worstRating": "1",
+        "ratingCount": "{{ movie.votes|default('1000') }}"
+    },
+    {% endif %}
+    {% if movie.directors %}
+    "director": [
+        {% for director in movie.directors %}
+        {
+            "@type": "Person",
+            "name": "{{ director }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    {% endif %}
+    {% if movie.cast %}
+    "actor": [
+        {% for actor in movie.cast %}
+        {
+            "@type": "Person",
+            "name": "{{ actor }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    {% endif %}
+    {% if movie.genres %}
+    "genre": [
+        {% for genre in movie.genres %}
+        "{{ genre }}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    {% endif %}
+    "url": "{{ request.url }}"
+}
+</script>
 {% endblock %}

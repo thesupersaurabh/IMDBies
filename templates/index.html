@@ -1,125 +1,1916 @@
 {% extends "base.html" %}
 
-{% block title %}IMDBies - Your Movie Streaming Destination{% endblock %}
+{% block title %}IMDBies - Watch Movies & TV Shows Online{% endblock %}
+
+{% block og_title %}IMDBies - Watch Movies & TV Shows Online{% endblock %}
+{% block og_description %}Stream your favorite movies and TV shows instantly. High quality, unlimited streaming.{% endblock %}
 
 {% block content %}
-    <h1 class="text-center mb-4">Search Movie or Series</h1>
-
-    <form id="movieForm">
-        <div class="form-row">
-            <div class="form-group col-md-12">
-                <label for="keyword">Enter Keyword:</label>
-                <input type="text" id="keyword" class="form-control" name="keyword" required>
+<div class="search-section py-4">
+    <div class="container">
+        <div class="search-container">
+            <div class="search-box">
+                <input type="text" id="keyword" class="search-input" placeholder="Search for movies and TV shows...">
+                <div class="search-actions">
+                    <button class="btn btn-outline-light me-2" type="button" data-bs-toggle="collapse" data-bs-target="#filterOptions">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                <button class="btn btn-primary" type="button" onclick="searchMovies()">
+                    <i class="fas fa-search"></i>
+                </button>
             </div>
         </div>
-        
-    </form>
+            <div class="collapse mt-3" id="filterOptions">
+                <div class="filter-container">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <select class="form-select" id="contentType">
+                                <option value="">All Content</option>
+                                <option value="movie">Movies Only</option>
+                                <option value="series">TV Shows Only</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="rating">
+                                <option value="">Any Rating</option>
+                                <option value="8">8+ Rating</option>
+                                <option value="7">7+ Rating</option>
+                                <option value="6">6+ Rating</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="sortBy">
+                                <option value="relevance">Relevance</option>
+                                <option value="rating">Rating</option>
+                                <option value="year">Year</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <ul id="movieList" class="list-unstyled d-flex flex-wrap"></ul>
-    <div id="movieDetails" class="mt-4"></div>
+<!-- Classic Cult Movies Section -->
+<div class="cult-movies-section py-4">
+    <div class="container">
+        <div id="cultMoviesList" class="row g-3"></div>
+        <div id="cultMoviesLoading" class="text-center py-3" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+</div>
 
+<div class="results-section py-4" style="display: none;">
+    <div class="container">
+        <h4 class="d-flex align-items-center mb-4">
+            <i class="fas fa-search text-primary me-2"></i>Search Results
+        </h4>
+        <div id="movieList" class="row g-3"></div>
+        <div id="loadingSpinner" class="text-center py-5" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div class="loading-spinner" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+
+
+
+<!-- About Modal -->
+<div class="modal fade" id="aboutModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">
+                    <i class="fas fa-film text-primary me-2"></i>Welcome to IMDBies
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="welcome-content">
+                    <div class="mb-4">
+                        <h5 class="mb-3">About Our Platform</h5>
+                        <p>Welcome to our movie and series search platform! We've created this site using VidSrc embedded for streaming content and IMDbPy to scrape movie details.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5 class="mb-3">Features We Offer</h5>
+                        <ul>
+                            <li>High-quality streaming experience</li>
+                            <li>Wide selection of movies and TV shows</li>
+                            <li>Easy-to-use interface</li>
+                            <li>Personalized watchlist</li>
+                            <li>Regular updates with new content</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="mb-3">Viewing Tips</h5>
+                        <p><strong>Ad-Free Experience:</strong> For the best viewing experience, we recommend using uBlock Origin to block ads and enjoy uninterrupted streaming. You can install it on your browser, and if you're on Android, use Kiwi Browser with uBlock Origin for ad-free mobile streaming.</p>
+                        <ul class="mt-3">
+                            <li>Use the search bar to find specific movies or TV shows</li>
+                            <li>Filter content by genres using the genre pills</li>
+                            <li>Save movies to your watchlist for later viewing</li>
+                            <li>Check movie details before watching</li>
+                            <li>Use the dark/light mode toggle for comfortable viewing</li>
+                        </ul>
+                    </div>
+
+                    <div class="legal-notice">
+                        <h5 class="mb-3">Legal Notice</h5>
+                        <p>IMDBies is a search engine and does not host any content. We respect intellectual property rights and comply with DMCA guidelines. All content is provided by third-party sources.</p>
+                        <ul>
+                            <li>We do not store or upload any videos</li>
+                            <li>All content is provided by non-affiliated third parties</li>
+                            <li>We strongly encourage users to support content creators by purchasing official content</li>
+                            <li>Please ensure you are complying with your local copyright laws</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Movie Details Modal -->
+<div class="modal fade" id="movieDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header border-0">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="movieDetailsContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="floating-menu">
+    <button class="btn btn-primary rounded-circle" onclick="showAboutModal()">
+        <i class="fas fa-info"></i>
+    </button>
+</div>
+
+<style>
+    .welcome-section {
+        background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('/static/cinema.jpg');
+        background-size: cover;
+        background-position: center;
+        color: var(--text-primary);
+    }
+
+    .welcome-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .welcome-content {
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    .legal-notice {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .legal-notice ul {
+        padding-left: 1.2rem;
+        margin-bottom: 0;
+    }
+
+    .legal-notice li {
+        margin-bottom: 0.5rem;
+    }
+
+    .movie-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        height: 100%;
+        position: relative;
+    }
+
+    .movie-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .movie-rating-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #ffd700;
+        padding: 0.5rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        backdrop-filter: blur(5px);
+        z-index: 2;
+    }
+
+    .movie-rating-badge i {
+        color: #ffd700;
+    }
+
+    .movie-card .movie-actions {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        gap: 8px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 2;
+    }
+
+    .movie-card:hover .movie-actions {
+        opacity: 1;
+    }
+
+    .movie-card .action-btn {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
+    }
+
+    .movie-card .action-btn:hover {
+        background: var(--primary-color);
+        transform: scale(1.1);
+    }
+
+    .movie-card .action-btn.active {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .movie-card img {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        object-position: center;
+    }
+
+    .movie-card .card-body {
+        padding: 1rem;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        color: white;
+    }
+
+    .movie-card .card-title {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+        color: white;
+    }
+
+    .movie-card .text-muted {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
+
+    .movie-card .btn-watch {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+    .movie-card .btn-watch:hover {
+        transform: scale(1.05);
+        background: var(--primary-color-hover);
+    }
+
+    .hero-section {
+        background: linear-gradient(135deg, rgba(26, 29, 36, 0.95) 0%, rgba(23, 24, 28, 0.95) 100%);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 6rem 0 4rem;
+    }
+
+    .text-gradient {
+        background: linear-gradient(45deg, var(--primary-color), #ff4b2b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .search-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .search-box {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 0;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .search-box:focus-within {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
+    }
+
+    .search-input {
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        padding: 1rem 1.5rem;
+        font-size: 1.1rem;
+        width: 100%;
+        height: 100%;
+    }
+
+    .search-input:focus {
+        outline: none;
+        box-shadow: none;
+    }
+
+    .search-input::placeholder {
+        color: var(--text-secondary);
+    }
+
+    .search-box .btn {
+        margin: 0.5rem;
+        padding: 0.75rem;
+        border-radius: 8px;
+        min-width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .search-box .btn i {
+        font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+        .hero-section {
+            padding: 4rem 0 2rem;
+        }
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-img-top {
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+    }
+
+    .movie-details {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+
+    .floating-menu {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+    }
+
+    .floating-menu .btn {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .floating-menu .btn:hover {
+        transform: scale(1.1);
+    }
+
+    .modal-dialog {
+        max-width: 800px;
+        margin: 1.75rem auto;
+    }
+
+    .modal-content {
+        background: rgba(25, 25, 25, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .movie-details-header {
+        position: relative;
+        height: 400px;
+        overflow: hidden;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .movie-details-header img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center top;
+    }
+
+    .movie-details-header .gradient-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to bottom, 
+            rgba(0, 0, 0, 0.2) 0%,
+            rgba(0, 0, 0, 0.8) 100%);
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+    }
+
+    .movie-details-body {
+        background: var(--bg-primary);
+        padding: 2rem;
+        border-radius: 0 0 16px 16px;
+    }
+
+    .movie-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: var(--text-primary);
+    }
+
+    .movie-meta {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .movie-meta .badge {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .movie-rating {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        color: var(--text-primary);
+    }
+
+    .movie-rating i {
+        color: #ffd700;
+    }
+
+    .movie-genres {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-bottom: 2rem;
+    }
+
+    .movie-genres .badge {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+
+    .movie-section {
+        margin-bottom: 2rem;
+    }
+
+    .movie-section h6 {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .movie-section p {
+        color: var(--text-primary);
+        line-height: 1.6;
+        margin-bottom: 0;
+    }
+
+    .movie-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .movie-actions .btn {
+        flex: 1;
+        padding: 1rem;
+        font-size: 1.1rem;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .movie-actions .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .episode-selector {
+        background: rgba(20, 20, 20, 0.9);
+        border-radius: 10px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 25px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .episode-controller {
+        background: #1e1e1e;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .ep-selector-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .ep-label {
+        width: 80px;
+        color: #fff;
+        font-weight: 500;
+        font-size: 0.95rem;
+    }
+    
+    .ep-control {
+        position: relative;
+        background: #2c2c2c;
+        border-radius: 4px;
+        padding: 8px 30px 8px 8px;
+        width: 140px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .ep-control span {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #fff;
+    }
+    
+    .ep-toggle-btn {
+        position: absolute;
+        right: 0;
+        width: 30px;
+        height: 20px;
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.5);
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+    
+    .ep-toggle-btn:first-of-type {
+        top: 0;
+    }
+    
+    .ep-toggle-btn:last-of-type {
+        bottom: 0;
+    }
+    
+    .ep-selector-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+    
+    .ep-add-btn {
+        width: 64px;
+        height: 40px;
+        background: #2c2c2c;
+        border: none;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+    
+    .ep-selector-navigation {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .ep-prev-btn, .ep-next-btn {
+        flex: 1;
+        height: 40px;
+        background: #cc3030;
+        border: none;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+    }
+    
+    .ep-info-section {
+        background: #2c2c2c;
+        border-radius: 4px;
+        padding: 12px 15px;
+        margin-bottom: 15px;
+    }
+    
+    .ep-info-header {
+        font-size: 0.95rem;
+        color: #ddd;
+        margin-bottom: 8px;
+    }
+    
+    .ep-info-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 5px;
+    }
+    
+    .ep-info-desc {
+        font-size: 0.9rem;
+        color: #aaa;
+    }
+    
+    .ep-watch-btn-main {
+        width: 100%;
+        height: 40px;
+        background: #cc3030;
+        border: none;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 0.95rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .btn-close-white {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    .modal-loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 300px;
+        color: var(--text-primary);
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .modal-loading-container .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+    
+    .modal-loading-container p {
+        margin-top: 1rem;
+        color: var(--text-secondary);
+        font-size: 1rem;
+    }
+
+    /* Notification styles */
+    .notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(26, 29, 36, 0.95);
+        border-left: 4px solid var(--primary-color);
+        border-radius: 4px;
+        padding: 0;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        z-index: 9999;
+        max-width: 300px;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    
+    .notification.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    .notification.success {
+        border-left-color: #28a745;
+    }
+    
+    .notification.info {
+        border-left-color: #17a2b8;
+    }
+    
+    .notification-content {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+    }
+    
+    .notification-content i {
+        font-size: 1.2rem;
+        margin-right: 10px;
+    }
+    
+    .notification.success i {
+        color: #28a745;
+    }
+    
+    .notification.info i {
+        color: #17a2b8;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
     <script>
-        var typingTimer;
-        var doneTypingInterval = 500;
-        var selectedMediaType = 'movie';  // Default to 'movie'
+    let typingTimer;
+    const doneTypingInterval = 500;
+    let currentSearchResults = [];
+    let watchlist = JSON.parse(localStorage.getItem('watchlist')) || [];
+    let selectedMovie = null;
+    let fallbackImageSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='450' viewBox='0 0 300 450'%3E%3Crect width='300' height='450' fill='%23333'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='24' fill='%23fff' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
 
-        document.getElementById('keyword').addEventListener('keypress', function(event) {
+// Helper function to convert text to URL-friendly slug
+function slugify(text) {
+    if (!text) return 'watch';
+    // Convert to lowercase
+    text = text.toLowerCase();
+    // Replace spaces with hyphens
+    text = text.replace(/\s+/g, '-');
+    // Remove non-alphanumeric characters (except hyphens)
+    text = text.replace(/[^a-z0-9\-]/g, '');
+    // Remove multiple hyphens
+    text = text.replace(/\-+/g, '-');
+    // Remove leading/trailing hyphens
+    text = text.replace(/^-+|-+$/g, '');
+    return text || 'watch';
+}
+
+// Pre-loaded cult movies data
+const CULT_MOVIES_DATA = [
+    {
+        "imdb_id": "tt0068646",
+        "title": "The Godfather",
+        "year": "1972",
+        "rating": "9.2",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BM2MyNjYxNmUtYTAwNi00MTYxLWJmNWYtYzZlODY3ZTk3OTFlXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0111161",
+        "title": "The Shawshank Redemption",
+        "year": "1994",
+        "rating": "9.3",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMDFkYTc0MGEtZmNhMC00ZDIzLWFmNTEtODM1ZmRlYWMwMWFmXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0071562",
+        "title": "The Godfather Part II",
+        "year": "1974",
+        "rating": "9.0",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMWMwMGQzZTItY2JlNC00OWZiLWIyMDctNDk2ZDQ2YjRjMWQ0XkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0050083",
+        "title": "12 Angry Men",
+        "year": "1957",
+        "rating": "9.0",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMWU4N2FjNzYtNTVkNC00NzQ0LTg0MjAtYTJlMjFhNGUxZDFmXkEyXkFqcGdeQXVyNjc1NTYyMjg@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0108052",
+        "title": "Schindler's List",
+        "year": "1993",
+        "rating": "9.0",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNjM1ZDQxYWUtMzQyZS00MTE1LWJmZGYtNGUyNTdlYjM3ZmVmXkEyXkFqcGc@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0110912",
+        "title": "Pulp Fiction",
+        "year": "1994",
+        "rating": "8.9",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNGNhMDIzZTUtNTBlZi00MTRlLWFjM2ItYzViMjE3YzI5MjljXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0137523",
+        "title": "Fight Club",
+        "year": "1999",
+        "rating": "8.8",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMmEzNTkxYjQtZTc0MC00YTVjLTg5ZTEtZWMwOWVlYzY0NWIwXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg", 
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0109830",
+        "title": "Forrest Gump",
+        "year": "1994",
+        "rating": "8.8",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNWIwODRlZTUtY2U3ZS00Yzg1LWJhNzYtMmZiYmEyNmU1NjMzXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0167260",
+        "title": "The Lord of the Rings: The Return of the King",
+        "year": "2003",
+        "rating": "9.0",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzA5ZDNlZWMtM2NhNS00NDJjLTk4NDItYTRmY2EwMWZlMTY3XkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0120737",
+        "title": "The Lord of the Rings: The Fellowship of the Ring",
+        "year": "2001",
+        "rating": "8.8",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BN2EyZjM3NzUtNWUzMi00MTgxLWI0NTctMzY4M2VlOTdjZWRiXkEyXkFqcGdeQXVyNDUzOTQ5MjY@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0080684",
+        "title": "Star Wars: Episode V - The Empire Strikes Back",
+        "year": "1980",
+        "rating": "8.7",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BOGUwMDk0Y2MtNjBlNi00NmRiLTk2MWYtMGMyMDlhYmI4ZDBjXkEyXkFqcGc@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0133093",
+        "title": "The Matrix",
+        "year": "1999",
+        "rating": "8.7",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0073486",
+        "title": "One Flew Over the Cuckoo's Nest",
+        "year": "1975", 
+        "rating": "8.7",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZjA0OWVhOTAtYWQxNi00YzNhLWI4ZjYtNjFjZTEyYjJlNDVlL2ltYWdlL2ltYWdlXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0099685",
+        "title": "Goodfellas",
+        "year": "1990",
+        "rating": "8.7",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BY2NkZjEzMDgtN2RjYy00YzM1LWI4ZmQtMjIwYjFjNmI3ZGEwXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0102926",
+        "title": "The Silence of the Lambs",
+        "year": "1991",
+        "rating": "8.6",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNjNhZTk0ZmEtNjJhMi00YzFlLWE1MmEtYzM1M2ZmMGMwMTU4XkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0114369",
+        "title": "Se7en",
+        "year": "1995",
+        "rating": "8.6",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BOTUwODM5MTctZjczMi00OTk4LTg3NWUtNmVhMTAzNTNjYjcyXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0076759",
+        "title": "Star Wars: Episode IV - A New Hope",
+        "year": "1977",
+        "rating": "8.6",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzVlY2MwMjktM2E4OS00Y2Y3LWE3ZjctYzhkZGM3YzA1ZWM2XkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0047478",
+        "title": "Seven Samurai",
+        "year": "1954",
+        "rating": "8.6",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZjliMWExOTMtZDQ3ZS00NWU3LWIyN2EtMjllNzk3ZTNlYzg4XkEyXkFqcGc@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0038650",
+        "title": "It's a Wonderful Life",
+        "year": "1946",
+        "rating": "8.6",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMDM4OWFhYjEtNTE5Yy00NjcyLTg5N2UtZDQwNDZlYjlmNDU5XkEyXkFqcGc@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0118799",
+        "title": "Life Is Beautiful",
+        "year": "1997",
+        "rating": "8.6",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BYmJmM2Q4NmMtYThmNC00ZjRlLWEyZmItZTIwOTBlZDQ3NTQ1XkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0816692",
+        "title": "Interstellar",
+        "year": "2014",
+        "rating": "8.6",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0245429",
+        "title": "Spirited Away",
+        "year": "2001",
+        "rating": "8.6",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMjlmZmI5MDctNDE2YS00YWE0LWE5ZWItZDBhYWQ0NTcxNWRhXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0468569",
+        "title": "The Dark Knight",
+        "year": "2008",
+        "rating": "9.0",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0083658",
+        "title": "Blade Runner",
+        "year": "1982",
+        "rating": "8.1",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzQzMzJhZTEtOWM4NS00MTdhLTg0YjgtMjM4MDRkZjUwZDBlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
+        "is_series": false
+    },
+    {
+        "imdb_id": "tt0088763",
+        "title": "Back to the Future",
+        "year": "1985",
+        "rating": "8.5",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZmU0M2Y1OGUtZjIxNi00ZjBkLTg1MjgtOWIyNThiZWIwYjRiXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
+        "is_series": false
+    }
+];
+    
+    // Function to handle image loading errors
+    function handleImageError(img) {
+        img.src = fallbackImageSrc;
+        img.onerror = null; // Prevent infinite loop
+        return true;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        setupEventListeners();
+        loadClassicCultMovies();
+        clearMovieDetails();
+    });
+
+    function clearMovieDetails() {
+        selectedMovie = null;
+    }
+
+    function setupEventListeners() {
+        // Search input
+        const searchInput = document.getElementById('keyword');
+        searchInput.addEventListener('input', function() {
+            clearTimeout(typingTimer);
+            if (this.value.trim()) {
+                typingTimer = setTimeout(searchMovies, doneTypingInterval);
+            } else {
+                // Clear search results when input is empty
+                const movieListContainer = document.getElementById('movieList');
+                movieListContainer.innerHTML = '';
+                document.querySelector('.results-section').style.display = 'none';
+                document.querySelector('.cult-movies-section').style.display = 'block';
+                clearMovieDetails();
+            }
+        });
+
+        searchInput.addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
-            }
-        });
-
-        document.getElementById('keyword').addEventListener('input', function() {
-            clearTimeout(typingTimer);
-            if (this.value) {
-                typingTimer = setTimeout(searchMovies, doneTypingInterval);
-            }
-        });
-
-        document.querySelectorAll('input[name="mediaType"]').forEach(function(radio) {
-            radio.addEventListener('change', function() {
-                selectedMediaType = this.value;
                 searchMovies();
-            });
+            }
         });
 
-        function searchMovies() {
-            var keyword = document.getElementById('keyword').value;
-            var url = '/search_movies?keyword=' + encodeURIComponent(keyword) + '&type=' + selectedMediaType;
+        // Filter change listeners
+        document.getElementById('contentType').addEventListener('change', filterResults);
+        document.getElementById('rating').addEventListener('change', filterResults);
+        document.getElementById('sortBy').addEventListener('change', filterResults);
+    }
 
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        displayError(data.error);
-                    } else {
-                        displayMovieList(data);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error searching movies:', error);
-                    displayError('An error occurred while searching for movies.');
-                });
+    function getFilterParams() {
+        return {
+            contentType: document.getElementById('contentType').value,
+            rating: document.getElementById('rating').value,
+            sortBy: document.getElementById('sortBy').value
+        };
+    }
+
+    function filterResults() {
+        const filters = getFilterParams();
+        let filteredResults = [...currentSearchResults];
+
+        // Apply content type filter
+        if (filters.contentType) {
+            filteredResults = filteredResults.filter(movie => 
+                filters.contentType === 'movie' ? !movie.is_series : movie.is_series
+            );
         }
 
-        function displayMovieList(movieData) {
-            var movieListContainer = document.getElementById('movieList');
-            movieListContainer.innerHTML = '';
+        // Apply rating filter
+        if (filters.rating) {
+            filteredResults = filteredResults.filter(movie => 
+                movie.rating && parseFloat(movie.rating) >= parseFloat(filters.rating)
+            );
+        }
 
-            if (movieData.length > 0) {
-                for (var i = 0; i < movieData.length; i++) {
-                    var listItem = document.createElement('li');
-                    listItem.classList.add('m-3');
-                    listItem.innerHTML = '<div class="card" style="width: 8rem;">' +
-                                         '<img src="' + movieData[i]['thumbnail'] + '" alt="' + movieData[i]['title'] + '" class="card-img-top" style="max-width: 100%; cursor: pointer;" onclick="getMovieDetails(\'' + movieData[i]['imdb_id'] + '\')">' +
-                                         '<div class="card-body">' +
-                                         '<h5 class="card-title">' + movieData[i]['title'] + '</h5>' +
-                                         '<p class="card-text">Year: ' + movieData[i]['year'] + '</p>' +
-                                         '<button class="btn btn-primary" onclick="watchMovie(\'' + movieData[i]['imdb_id'] + '\')">Watch</button>' +
-                                         '</div></div>';
-
-                    movieListContainer.appendChild(listItem);
+        // Apply sorting
+        if (filters.sortBy) {
+            filteredResults.sort((a, b) => {
+                switch (filters.sortBy) {
+                    case 'rating':
+                        return (b.rating || 0) - (a.rating || 0);
+                    case 'year':
+                        return (b.year || 0) - (a.year || 0);
+                    default:
+                        return 0;
                 }
-            } else {
-                displayError('No movies found.');
-            }
+            });
         }
 
-        function getMovieDetails(imdbId) {
-            var url = '/get_movie_details?imdbId=' + imdbId;
+        displayMovieList(filteredResults);
+    }
 
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    displayMovieDetails(data);
-                })
-                .catch(error => {
-                    console.error('Error fetching movie details:', error);
-                    displayError('An error occurred while fetching movie details.');
+    async function showTrendingMovies() {
+        showLoading();
+        try {
+            // Use a keyword that will return movies with ratings
+            const trendingKeyword = 'best movies';
+            const response = await fetch(`/search_combined?keyword=${trendingKeyword}`);
+            const data = await response.json();
+            if (!data.error) {
+                // Ensure all movies have properly formatted ratings
+                currentSearchResults = data.map(movie => {
+                    if (movie.rating && !isNaN(parseFloat(movie.rating))) {
+                        movie.rating = parseFloat(movie.rating).toFixed(1);
+                    }
+                    return movie;
                 });
+                filterResults();
+                
+                // Check and update any missing ratings
+                checkAndUpdateMissingRatings(currentSearchResults);
+            } else {
+                displayError('Error loading trending content.');
+            }
+        } catch (error) {
+            console.error('Error loading trending content:', error);
+            displayError('Error loading trending content.');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Function to fetch ratings for a movie if missing
+    async function fetchRatingForMovie(imdbId) {
+        try {
+            const response = await fetch(`/get_movie_details?imdbId=${imdbId}`);
+            const data = await response.json();
+            if (!data.error && data.rating) {
+                return data.rating;
+            }
+            return null;
+        } catch (error) {
+            console.error('Error fetching movie rating:', error);
+            return null;
+        }
+    }
+
+    async function searchMovies() {
+        const keyword = document.getElementById('keyword').value.trim();
+        if (!keyword) {
+            // Hide results section if no search term
+            document.querySelector('.results-section').style.display = 'none';
+            document.querySelector('.cult-movies-section').style.display = 'block';
+            return;
         }
 
-        function displayMovieDetails(movieDetails) {
-            var detailsContainer = document.getElementById('movieDetails');
-            detailsContainer.innerHTML = '';
-
-            if (movieDetails.error) {
-                displayError(movieDetails.error);
+        showLoading();
+        try {
+            const response = await fetch(`/search_combined?keyword=${encodeURIComponent(keyword)}`);
+            const data = await response.json();
+            
+            // Hide cult movies and show search results
+            document.querySelector('.cult-movies-section').style.display = 'none';
+            document.querySelector('.results-section').style.display = 'block';
+            
+            if (data.error) {
+                displayError(data.error);
+                currentSearchResults = [];
             } else {
-                detailsContainer.innerHTML = '<p>Title: ' + movieDetails.title + '</p>' +
-                                             '<p>Year: ' + movieDetails.year + '</p>' +
-                                             '<p>Genres: ' + movieDetails.genres.join(', ') + '</p>' +
-                                             '<p>Directors: ' + movieDetails.directors.join(', ') + '</p>';
+                // Ensure all movies have properly formatted ratings
+                currentSearchResults = data.map(movie => {
+                    if (movie.rating && !isNaN(parseFloat(movie.rating))) {
+                        movie.rating = parseFloat(movie.rating).toFixed(1);
+                    }
+                    return movie;
+                });
+                filterResults();
+            }
+        } catch (error) {
+            console.error('Error searching content:', error);
+            displayError('An error occurred while searching.');
+            currentSearchResults = [];
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function displayMovieList(movieData) {
+        const movieListContainer = document.getElementById('movieList');
+        movieListContainer.innerHTML = '';
+
+        if (!movieData || movieData.length === 0) {
+            movieListContainer.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <p class="text-muted">No movies found. Try a different search term.</p>
+                </div>
+            `;
+            return;
+        }
+
+        for (const movie of movieData) {
+            if (!movie || !movie.imdb_id) continue;
+            
+            const thumbnailUrl = movie.thumbnail ? movie.thumbnail.replace(/\._V1_.*\.jpg$/, '._V1_SX300.jpg') : '';
+            const isInWatchlist = watchlist.some(item => item.imdb_id === movie.imdb_id);
+            
+            // Format rating consistently
+            let rating = 'N/A';
+            if (movie.rating && !isNaN(parseFloat(movie.rating))) {
+                rating = parseFloat(movie.rating).toFixed(1);
+            }
+            
+            const col = document.createElement('div');
+            col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+            col.innerHTML = `
+                <div class="movie-card" data-imdbid="${movie.imdb_id}">
+                    <div class="position-relative">
+                    <img src="${thumbnailUrl || fallbackImageSrc}" 
+                         alt="${movie.title}"
+                         class="movie-thumbnail"
+                         loading="lazy"
+                         onerror="handleImageError(this)">
+                        <div class="movie-rating-badge">
+                            <i class="fas fa-star"></i> ${rating}
+                        </div>
+                    <div class="movie-actions">
+                        <button class="action-btn ${isInWatchlist ? 'active' : ''}" 
+                                onclick="event.preventDefault(); toggleWatchlistItem('${movie.imdb_id}');" 
+                                title="${isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}">
+                            <i class="fas fa-bookmark"></i>
+                        </button>
+                        <button class="action-btn" 
+                                onclick="event.preventDefault(); showMovieDetails('${movie.imdb_id}');" 
+                                title="Show Details">
+                            <i class="fas fa-info"></i>
+                        </button>
+                    </div>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title text-truncate">${movie.title}</h6>
+                        <p class="text-muted mb-2">${movie.year || 'N/A'}</p>
+                        <a href="/movie/${movie.imdb_id}/${slugify(movie.title)}" class="btn btn-watch" target="_blank">
+                            <i class="fas fa-play me-1"></i>Watch
+                        </a>
+                    </div>
+                </div>
+            `;
+            movieListContainer.appendChild(col);
+        }
+    }
+    
+    // Function to check and update missing ratings
+    async function checkAndUpdateMissingRatings(movies) {
+        const moviesWithoutRatings = movies.filter(m => !m.rating || m.rating === 'N/A');
+        if (moviesWithoutRatings.length === 0) return;
+        
+        // Process movies without ratings
+        for (const movie of moviesWithoutRatings) {
+            try {
+                const response = await fetch(`/get_movie_details?imdbId=${movie.imdb_id}`);
+                const data = await response.json();
+                
+                if (!data.error && data.rating && !isNaN(parseFloat(data.rating))) {
+                    // Update the rating in the movie object
+                    movie.rating = parseFloat(data.rating).toFixed(1);
+                    
+                    // Update the UI
+                    const movieCard = document.querySelector(`.movie-card[data-imdbid="${movie.imdb_id}"]`);
+                    if (movieCard) {
+                        const ratingBadge = movieCard.querySelector('.movie-rating-badge');
+                        if (ratingBadge) {
+                            ratingBadge.innerHTML = `<i class="fas fa-star"></i> ${movie.rating}`;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(`Error fetching rating for movie ${movie.imdb_id}:`, error);
             }
         }
+    }
 
-        function watchMovie(imdbId) {
-            window.location.href = '/watch?imdbId=' + imdbId;
+    async function showMovieDetails(imdbId) {
+        const modal = new bootstrap.Modal(document.getElementById('movieDetailsModal'));
+        modal.show();
+        
+        // Show loading message in modal
+        document.getElementById('movieDetailsContent').innerHTML = `
+            <div class="modal-loading-container">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading movie details...</p>
+            </div>
+        `;
+        
+        try {
+            selectedMovie = {imdbId};
+            const response = await fetch(`/get_movie_details?imdbId=${imdbId}`);
+            const data = await response.json();
+            
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+                const isInWatchlist = watchlist.some(item => item.imdb_id === imdbId);
+            const genres = data.genres ? data.genres.map(g => `<span class="badge badge-genre">${g}</span>`).join(' ') : '';
+            const directors = data.directors ? `<strong>Directors:</strong> ${data.directors.join(', ')}` : '';
+            const cast = data.cast ? `<strong>Cast:</strong> ${data.cast.join(', ')}` : '';
+            
+            // Format rating consistently
+            let rating = 'N/A';
+            if (data.rating && !isNaN(parseFloat(data.rating))) {
+                rating = parseFloat(data.rating).toFixed(1);
+            }
+            
+            // Generate SEO-friendly URL for watch link
+            const watchUrl = data.seo_url ? data.seo_url : `/movie/${imdbId}/${slugify(data.title)}`;
+                
+                document.getElementById('movieDetailsContent').innerHTML = `
+                <div class="movie-details">
+                    <div class="movie-details-header" style="background-image: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.8)), url('${data.thumbnail || fallbackImageSrc}')">
+                        <div class="gradient-overlay">
+                            <div class="movie-meta">
+                                <span class="badge ${isInWatchlist ? 'bg-success' : 'bg-primary'}">${data.is_series ? 'TV Series' : 'Movie'}</span>
+                                <span class="badge bg-secondary">${data.year || 'N/A'}</span>
+                                <div class="movie-rating">
+                                    <i class="fas fa-star"></i>
+                                    <span>${rating || 'N/A'}/10</span>
+                                    <span class="ms-2">(${data.votes ? (data.votes).toLocaleString() : 0} votes)</span>
+                            </div>
+                                </div>
+                            <h1 class="movie-title">${data.title}</h1>
+                        </div>
+                    </div>
+                    <div class="movie-details-body">
+                        <div class="movie-genres">
+                            ${genres}
+                            </div>
+                        
+                        ${data.is_series ? `
+                            <div class="movie-section">
+                                <div class="episode-controller">
+                                    <div class="ep-selector-row">
+                                        <div class="ep-label">Season</div>
+                                        <div class="ep-control">
+                                            <span id="seasonDisplay">—</span>
+                                            <button class="ep-toggle-btn" onclick="adjustSeason(1)">
+                                                <i class="fas fa-caret-up"></i>
+                                            </button>
+                                            <button class="ep-toggle-btn" onclick="adjustSeason(-1)">
+                                                <i class="fas fa-caret-down"></i>
+                                            </button>
+                        </div>
+                        </div>
+                                    
+                                    <div class="ep-selector-row">
+                                        <div class="ep-label">Episode</div>
+                                        <div class="ep-control">
+                                            <span id="episodeDisplay">—</span>
+                                            <button class="ep-toggle-btn" onclick="adjustEpisode(1)">
+                                                <i class="fas fa-caret-up"></i>
+                                            </button>
+                                            <button class="ep-toggle-btn" onclick="adjustEpisode(-1)">
+                                                <i class="fas fa-caret-down"></i>
+                                            </button>
+                        </div>
+                        </div>
+                                    
+                                    <div class="ep-selector-actions">
+                                        <button class="ep-add-btn" onclick="adjustSeason(1)">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                        <button class="ep-add-btn" onclick="adjustEpisode(1)">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="ep-selector-navigation">
+                                        <button class="ep-prev-btn" onclick="navigateEpisode(-1)">
+                                            <i class="fas fa-step-backward me-1"></i> Previous
+                                        </button>
+                                        <button class="ep-next-btn" onclick="navigateEpisode(1)">
+                                            Next <i class="fas fa-step-forward ms-1"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="ep-info-section">
+                                        <div class="ep-info-header">Current Episode</div>
+                                        <div class="ep-info-content">
+                                            <div class="ep-info-title" id="episodeTitle">Season 1, Episode 1</div>
+                                            <div class="ep-info-desc" id="episodeInfo">Episode information not available</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button class="ep-watch-btn-main" onclick="watchEpisode('${imdbId}')">
+                                <i class="fas fa-play me-2"></i>Watch Now
+                                    </button>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="movie-section">
+                            <h6>Plot</h6>
+                            <p>${data.plot || 'No plot available.'}</p>
+                        </div>
+                        
+                        <div class="movie-section">
+                            <h6>Directors</h6>
+                            <p>${directors || 'N/A'}</p>
+                        </div>
+                        
+                        <div class="movie-section">
+                            <h6>Cast</h6>
+                            <p>${cast || 'N/A'}</p>
+                        </div>
+                        
+                        <div class="movie-actions">
+                            ${!data.is_series ? `
+                                <a href="${watchUrl}" class="btn btn-primary" target="_blank">
+                                    <i class="fas fa-play"></i>
+                                    Watch Now
+                                </a>
+                            ` : ''}
+                            <button class="btn ${isInWatchlist ? 'btn-danger' : 'btn-outline-primary'}" 
+                                    onclick="toggleWatchlistItem('${imdbId}')">
+                                <i class="fas fa-bookmark"></i>
+                                ${isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
+                            </button>
+                            <a href="https://www.imdb.com/title/${imdbId}/reviews" class="btn btn-outline-warning" target="_blank">
+                                <i class="fas fa-star"></i>
+                                Rate on IMDb
+                            </a>
+                        </div>
+                        </div>
+                    </div>
+                `;
+                
+            // Initialize episode data
+            if (data.is_series) {
+                // Setup global variables for episode navigation
+                window.currentSeries = {
+                    imdbId: imdbId,
+                    title: data.title,
+                    currentSeason: 1,
+                    currentEpisode: 1,
+                    maxSeasons: data.seasons || 1,
+                    episodesPerSeason: 10 // default value, would be better to get actual data
+                };
+                
+                updateEpisodeDisplay();
+            }
+            
+            // Fix for screen freeze by removing event listeners after modal is shown
+                setTimeout(() => {
+                    document.querySelectorAll('#movieDetailsContent img').forEach(img => {
+                    img.onerror = null;
+                    });
+                }, 300);
+        } catch (error) {
+            console.error('Error loading movie details:', error);
+            document.getElementById('movieDetailsContent').innerHTML = `
+                <div class="modal-loading-container">
+                    <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+                    <h5>Error Loading Details</h5>
+                    <p>There was a problem loading the movie details. Please try again later.</p>
+                </div>
+            `;
+        }
+    }
+
+    function adjustSeason(delta) {
+        if (!window.currentSeries) return;
+        
+        const newSeason = Math.max(1, Math.min(window.currentSeries.maxSeasons, window.currentSeries.currentSeason + delta));
+        if (newSeason !== window.currentSeries.currentSeason) {
+            window.currentSeries.currentSeason = newSeason;
+            window.currentSeries.currentEpisode = 1; // Reset to first episode when changing season
+            updateEpisodeDisplay();
+        }
+    }
+
+    function adjustEpisode(delta) {
+        if (!window.currentSeries) return;
+        
+        const maxEpisodes = window.currentSeries.episodesPerSeason;
+        const newEpisode = Math.max(1, Math.min(maxEpisodes, window.currentSeries.currentEpisode + delta));
+        
+        if (newEpisode !== window.currentSeries.currentEpisode) {
+            window.currentSeries.currentEpisode = newEpisode;
+            updateEpisodeDisplay();
+        }
+    }
+
+    function navigateEpisode(direction) {
+        if (!window.currentSeries) return;
+        
+        const maxEpisodes = window.currentSeries.episodesPerSeason;
+        let newSeason = window.currentSeries.currentSeason;
+        let newEpisode = window.currentSeries.currentEpisode + direction;
+        
+        if (newEpisode < 1) {
+            newSeason = Math.max(1, newSeason - 1);
+            if (newSeason !== window.currentSeries.currentSeason) {
+                newEpisode = maxEpisodes; // Go to last episode of previous season
+            } else {
+                newEpisode = 1; // Stay at first episode if we're at season 1
+            }
+        } else if (newEpisode > maxEpisodes) {
+            newSeason = Math.min(window.currentSeries.maxSeasons, newSeason + 1);
+            if (newSeason !== window.currentSeries.currentSeason) {
+                newEpisode = 1; // Go to first episode of next season
+            } else {
+                newEpisode = maxEpisodes; // Stay at last episode if we're at final season
+            }
+        }
+        
+        if (newSeason !== window.currentSeries.currentSeason || newEpisode !== window.currentSeries.currentEpisode) {
+            window.currentSeries.currentSeason = newSeason;
+            window.currentSeries.currentEpisode = newEpisode;
+            updateEpisodeDisplay();
+        }
+    }
+
+    function updateSeasonFromInput(value) {
+        if (!window.currentSeries) return;
+        
+        const season = parseInt(value);
+        if (!isNaN(season) && season >= 1 && season <= window.currentSeries.maxSeasons) {
+            window.currentSeries.currentSeason = season;
+            window.currentSeries.currentEpisode = 1; // Reset to first episode when changing season
+            updateEpisodeDisplay();
+        } else {
+            // Reset to valid value if input is invalid
+            document.getElementById('seasonInput').value = window.currentSeries.currentSeason;
+        }
+    }
+
+    function updateEpisodeFromInput(value) {
+        if (!window.currentSeries) return;
+        
+        const episode = parseInt(value);
+        if (!isNaN(episode) && episode >= 1 && episode <= window.currentSeries.episodesPerSeason) {
+            window.currentSeries.currentEpisode = episode;
+            updateEpisodeDisplay();
+        } else {
+            // Reset to valid value if input is invalid
+            document.getElementById('episodeInput').value = window.currentSeries.currentEpisode;
+        }
+    }
+
+    function updateEpisodeDisplay() {
+        if (!window.currentSeries) return;
+        
+        const seasonDisplay = document.getElementById('seasonDisplay');
+        const episodeDisplay = document.getElementById('episodeDisplay');
+        const episodeTitle = document.getElementById('episodeTitle');
+        
+        if (seasonDisplay && episodeDisplay && episodeTitle) {
+            seasonDisplay.textContent = window.currentSeries.currentSeason;
+            episodeDisplay.textContent = window.currentSeries.currentEpisode;
+            episodeTitle.textContent = `Season ${window.currentSeries.currentSeason}, Episode ${window.currentSeries.currentEpisode}`;
+        }
+    }
+
+    function watchEpisode(imdbId) {
+        if (!window.currentSeries) return;
+        
+        const season = window.currentSeries.currentSeason;
+        const episode = window.currentSeries.currentEpisode;
+        const title = window.currentSeries.title || '';
+        
+        // Open the watch page in a new tab using SEO-friendly URL
+        window.open(`/series/${imdbId}/${slugify(title)}/s${season}/e${episode}`, '_blank');
+    }
+
+    function toggleWatchlistItem(imdbId) {
+        const index = watchlist.findIndex(item => item.imdb_id === imdbId);
+        if (index === -1) {
+            // Find the movie in current search results
+            let movie = currentSearchResults.find(m => m.imdb_id === imdbId);
+            
+            // If not in search results, check the cult movies list
+            if (!movie) {
+                // Fetch directly from server
+                fetch(`/get_movie_details?imdbId=${imdbId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.error) {
+                            // Add to watchlist
+                            watchlist.push({
+                                imdb_id: imdbId,
+                                title: data.title,
+                                year: data.year,
+                                thumbnail: data.thumbnail,
+                                is_series: data.is_series,
+                                rating: data.rating
+                            });
+                            localStorage.setItem('watchlist', JSON.stringify(watchlist));
+                            
+                            // Update UI
+                            updateWatchlistButtons(imdbId, true);
+                            showNotification(`Added "${data.title}" to your watchlist!`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error adding to watchlist:', error);
+                    });
+            } else {
+                // Add from search results
+            watchlist.push(movie);
+                localStorage.setItem('watchlist', JSON.stringify(watchlist));
+                updateWatchlistButtons(imdbId, true);
+                showNotification(`Added "${movie.title}" to your watchlist!`);
+            }
+        } else {
+            // Remove from watchlist
+            const movieTitle = watchlist[index].title;
+            watchlist.splice(index, 1);
+            localStorage.setItem('watchlist', JSON.stringify(watchlist));
+            updateWatchlistButtons(imdbId, false);
+            showNotification(`Removed "${movieTitle}" from your watchlist!`);
+        }
+    }
+    
+    // Helper function to update watchlist buttons
+    function updateWatchlistButtons(imdbId, isInWatchlist) {
+        // Update buttons in movie cards
+        document.querySelectorAll(`.movie-card[data-imdbid="${imdbId}"] .action-btn:first-child`).forEach(btn => {
+            if (isInWatchlist) {
+                btn.classList.add('active');
+                btn.title = 'Remove from Watchlist';
+            } else {
+                btn.classList.remove('active');
+                btn.title = 'Add to Watchlist';
+            }
+        });
+        
+        // Update button in movie details modal if open
+        const detailsBtn = document.querySelector('#movieDetailsContent .movie-actions button:first-child');
+        if (detailsBtn && detailsBtn.getAttribute('onclick').includes(imdbId)) {
+            detailsBtn.className = `btn ${isInWatchlist ? 'btn-danger' : 'btn-outline-primary'}`;
+            detailsBtn.innerHTML = `
+                <i class="fas fa-bookmark"></i>
+                ${isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
+            `;
+        }
+    }
+    
+    // Function to show notification
+    function showNotification(message, type = 'success') {
+        // Remove existing notification if any
+        const existingNotification = document.querySelector('.notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+        
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        // Add to body
+        document.body.appendChild(notification);
+        
+        // Show with animation
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 10);
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
+    }
+
+    function toggleWatchlist() {
+        const modal = new bootstrap.Modal(document.getElementById('watchlistModal'));
+        const watchlistContent = document.getElementById('watchlistContent');
+        
+        if (!watchlist || watchlist.length === 0) {
+            watchlistContent.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-bookmark fa-3x mb-3 text-muted"></i>
+                    <h4>Your watchlist is empty</h4>
+                    <p class="text-muted">Start adding movies to your watchlist</p>
+                </div>
+            `;
+            } else {
+            watchlistContent.innerHTML = watchlist.map(movie => {
+                const thumbnailUrl = movie.thumbnail ? movie.thumbnail.replace(/\._V1_.*\.jpg$/, '._V1_SX300.jpg') : '';
+                const contentType = movie.is_series ? 'TV Series' : 'Movie';
+                const typeClass = movie.is_series ? 'bg-success' : 'bg-primary';
+                
+                return `
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="position-relative">
+                                <img src="${thumbnailUrl || fallbackImageSrc}" 
+                                     class="card-img-top" 
+                                     alt="${movie.title}" 
+                                     style="height: 300px; object-fit: cover;"
+                                     loading="lazy"
+                                     onerror="handleImageError(this)">
+                                <div class="position-absolute top-0 end-0 m-2">
+                                    <span class="badge ${typeClass}">${contentType}</span>
+                                </div>
+                                <div class="position-absolute bottom-0 start-0 end-0 p-3" 
+                                     style="background: linear-gradient(transparent, rgba(0,0,0,0.8));">
+                                    <h6 class="card-title text-white mb-0">${movie.title}</h6>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <button class="btn btn-primary btn-sm flex-grow-1 me-2" onclick="window.location.href='/movie/${movie.imdb_id}/${slugify(movie.title)}'">
+                                        <i class="fas fa-play me-1"></i>Watch
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="removeFromWatchlist('${movie.imdb_id}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function displayError(errorMessage) {
-            var detailsContainer = document.getElementById('movieDetails');
-            detailsContainer.innerHTML = '<p style="color: red;">Error: ' + errorMessage + '</p>';
+        modal.show();
+        
+        // After modal is shown, set error handlers for all images
+        setTimeout(() => {
+            document.querySelectorAll('#watchlistContent img').forEach(img => {
+                img.onerror = function() {
+                    return handleImageError(this);
+                };
+            });
+        }, 300);
+    }
+
+    function removeFromWatchlist(imdbId) {
+        if (!imdbId) return;
+        
+        watchlist = watchlist.filter(item => item.imdb_id !== imdbId);
+        localStorage.setItem('watchlist', JSON.stringify(watchlist));
+        toggleWatchlist();
+        
+        // Refresh movie list to update watchlist buttons
+        displayMovieList(currentSearchResults);
+        
+        // Update movie details if the removed movie is currently selected
+        if (selectedMovie === imdbId) {
+            showMovieDetails(imdbId);
         }
+    }
+
+    function showAboutModal() {
+        const modal = new bootstrap.Modal(document.getElementById('aboutModal'));
+        modal.show();
+    }
+
+    function showLoading() {
+        document.getElementById('loadingSpinner').style.display = 'block';
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingSpinner').style.display = 'none';
+    }
+
+    function displayError(message) {
+        const movieListContainer = document.getElementById('movieList');
+        movieListContainer.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-exclamation-circle fa-3x mb-3 text-danger"></i>
+                <h4>Error</h4>
+                <p class="text-muted">${message}</p>
+            </div>
+        `;
+    }
+
+    // Function to load classic cult movies
+    async function loadClassicCultMovies() {
+        const cultMoviesContainer = document.getElementById('cultMoviesList');
+        const loadingElement = document.getElementById('cultMoviesLoading');
+        
+        if (!cultMoviesContainer) return;
+        
+        // Show loading indicator
+        if (loadingElement) loadingElement.style.display = 'block';
+        
+        try {
+            // Use pre-loaded movie data instead of individual fetches
+            const cultMovies = CULT_MOVIES_DATA || [];
+            
+            cultMoviesContainer.innerHTML = '';
+            let moviesAdded = 0;
+            
+            // Display each cult movie from the pre-loaded data
+            for (const movie of cultMovies) {
+                if (!movie || !movie.imdb_id) continue;
+                
+                const imdbId = movie.imdb_id;
+                const thumbnailUrl = movie.thumbnail ? movie.thumbnail.replace(/\._V1_.*\.jpg$/, '._V1_SX300.jpg') : '';
+                const isInWatchlist = watchlist.some(item => item.imdb_id === imdbId);
+                
+                // Format rating consistently
+                let rating = 'N/A';
+                if (movie.rating && !isNaN(parseFloat(movie.rating))) {
+                    rating = parseFloat(movie.rating).toFixed(1);
+                }
+                
+                const col = document.createElement('div');
+                col.className = 'col-6 col-sm-4 col-md-3 col-lg-2';
+                col.innerHTML = `
+                    <div class="movie-card" data-imdbid="${imdbId}">
+                        <div class="position-relative">
+                            <img src="${thumbnailUrl || fallbackImageSrc}" 
+                                 alt="${movie.title}"
+                                 class="movie-thumbnail"
+                                 loading="lazy"
+                                 onerror="handleImageError(this)">
+                            <div class="movie-rating-badge">
+                                <i class="fas fa-star"></i> ${rating}
+                            </div>
+                            <div class="movie-actions">
+                                <button class="action-btn ${isInWatchlist ? 'active' : ''}" 
+                                        onclick="event.preventDefault(); toggleWatchlistItem('${imdbId}');" 
+                                        title="${isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}">
+                                    <i class="fas fa-bookmark"></i>
+                                </button>
+                                <button class="action-btn" 
+                                        onclick="event.preventDefault(); showMovieDetails('${imdbId}');" 
+                                        title="Show Details">
+                                    <i class="fas fa-info"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="card-title text-truncate">${movie.title}</h6>
+                            <p class="text-muted mb-2">${movie.year || 'N/A'}</p>
+                            <a href="/movie/${imdbId}/${slugify(movie.title)}" class="btn btn-watch" target="_blank">
+                                <i class="fas fa-play me-1"></i>Watch
+                            </a>
+                        </div>
+                    </div>
+                `;
+                cultMoviesContainer.appendChild(col);
+                moviesAdded++;
+            }
+            
+            // If no movies were added, show a message
+            if (moviesAdded === 0) {
+                cultMoviesContainer.innerHTML = `
+                    <div class="col-12 text-center py-3">
+                        <p class="text-muted">No cult movies available right now. Please check back later.</p>
+                    </div>
+                `;
+            }
+            
+        } catch (error) {
+            console.error('Error loading cult movies:', error);
+            cultMoviesContainer.innerHTML = `
+                <div class="col-12 text-center py-3">
+                    <p class="text-muted">Error loading cult movies. Please try again later.</p>
+                </div>
+            `;
+        } finally {
+            // Hide loading indicator
+            if (loadingElement) loadingElement.style.display = 'none';
+        }
+    }
     </script>
 {% endblock %}

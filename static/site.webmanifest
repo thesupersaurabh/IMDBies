@@ -1,0 +1,22 @@
+{
+    "name": "IMDBies - Movie Streaming",
+    "short_name": "IMDBies",
+    "description": "Watch movies and TV shows online. Stream unlimited content for free.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#141414",
+    "theme_color": "#e50914",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "/static/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/static/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+} 

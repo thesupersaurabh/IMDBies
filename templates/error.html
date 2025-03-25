@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Error {{ code if code else '500' }}{% endblock %}
+
+{% block og_title %}Error - IMDBies{% endblock %}
+{% block og_description %}An error occurred while processing your request.{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="error-page">
+                <h1 class="display-1 text-danger">{{ code if code else '500' }}</h1>
+                <h2 class="mb-4">Oops! Something went wrong</h2>
+                
+                <div class="alert alert-danger">
+                    <p class="mb-0">{{ error }}</p>
+                </div>
+
+                {% if suggestion %}
+                <div class="alert alert-info">
+                    <p class="mb-0">{{ suggestion }}</p>
+                </div>
+                {% endif %}
+
+                <div class="mt-4">
+                    <a href="/" class="btn btn-primary me-2">
+                        <i class="fas fa-home"></i> Go Home
+                    </a>
+                    <button onclick="history.back()" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Go Back
+                    </button>
+                </div>
+
+                <div class="mt-4 text-muted">
+                    <small>If you continue to experience issues, please contact support.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+.error-page h1 {
+    font-size: 6rem;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.error-page .alert {
+    max-width: 600px;
+    margin: 0 auto;
+}
+</style>
+{% endblock %} 
