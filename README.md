@@ -29,8 +29,8 @@ A modern movie and TV show streaming platform built with Flask and IMDbPY. Watch
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/imdbie.git
-cd imdbie
+git clone https://github.com/thesupersaurabh/imdbies.git
+cd imdbies
 ```
 
 2. Create a virtual environment:
