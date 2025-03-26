@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}About IMDBies - Free Movie & TV Streaming{% endblock %}
+
+{% block meta %}
+<meta name="description" content="About IMDBies - Your ultimate destination for free movie and TV show streaming. Learn about our mission to provide high-quality entertainment.">
+<meta name="keywords" content="about IMDBies, free streaming, movie streaming service, watch movies online, streaming platform">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <h1 class="display-4 mb-4">About IMDBies</h1>
+                    
+                    <div class="mb-5">
+                        <h2 class="h4 text-primary">Our Mission</h2>
+                        <p>IMDBies is a free streaming platform dedicated to providing users with easy access to movies and TV shows. Our goal is to create a user-friendly experience where you can discover and enjoy your favorite content without hassle.</p>
+                    </div>
+                    
+                    <div class="mb-5">
+                        <h2 class="h4 text-primary">What We Offer</h2>
+                        <ul class="list-group list-group-flush mb-3">
+                            <li class="list-group-item bg-transparent">Access to thousands of movies and TV shows</li>
+                            <li class="list-group-item bg-transparent">High-quality streaming experience</li>
+                            <li class="list-group-item bg-transparent">Personalized watchlist to save your favorites</li>
+                            <li class="list-group-item bg-transparent">Comprehensive search functionality</li>
+                            <li class="list-group-item bg-transparent">No registration required</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-5">
+                        <h2 class="h4 text-primary">How It Works</h2>
+                        <p>IMDBies aggregates available streaming sources for movies and TV shows. We don't host any content ourselves - instead, we help you find where to watch your favorite movies and shows. Our platform is designed to be simple and intuitive, allowing you to search for titles, browse by genre, or discover new releases.</p>
+                    </div>
+                    
+                    <div class="mb-5">
+                        <h2 class="h4 text-primary">Legal Information</h2>
+                        <p>IMDBies respects copyright laws and intellectual property rights. We work with legitimate streaming sources that have proper licensing for the content they provide. For more information about how we handle copyright and other legal matters, please see our <a href="{{ url_for('privacy') }}">Privacy Policy</a>.</p>
+                    </div>
+                    
+                    <div class="text-center mt-5">
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">Start Watching Now</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

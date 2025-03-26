@@ -53,8 +53,46 @@ CACHE_TIMEOUT = app.config['CACHE_DEFAULT_TIMEOUT']
 # Video source configuration
 VIDSRC_BASE_URL = app.config['VIDSRC_BASE_URL']
 
-# Initialize Sitemap
+# Disable default Flask-Sitemap routes for cleaner URLs
+app.config['SITEMAP_INCLUDE_RULES_WITHOUT_PARAMS'] = False
+app.config['SITEMAP_URL_SCHEME'] = 'https' if app.config.get('FORCE_HTTPS', False) else 'http'
+app.config['SITEMAP_BLUEPRINT_URL_PREFIX'] = None
+
+# No need for the extension to generate a sitemap (we use our custom one)
 ext = Sitemap(app=app)
+
+@ext.register_generator
+def sitemap_routes():
+    """Generate sitemap routes for Flask-Sitemap extension"""
+    # Yield only user-facing static routes
+    user_facing_routes = ['index', 'watchlist', 'about', 'privacy']
+    for route in user_facing_routes:
+        yield route, {}
+    
+    # Yield movie pages from our cache
+    for movie in SITEMAP_CACHE['recently_viewed']:
+        try:
+            # Extract imdb_id and slug
+            imdb_id = movie.get('imdb_id')
+            slug = movie.get('slug')
+            
+            if imdb_id and slug:
+                # Parameters dict for url_for function
+                yield 'movie_page', {'imdb_id': imdb_id, 'slug': slug}
+            else:
+                # Extract from URL if not directly available
+                url_parts = movie['url'].split('/')
+                if len(url_parts) >= 5:  # Make sure we have enough parts
+                    for i, part in enumerate(url_parts):
+                        if part == 'movie' and i+2 < len(url_parts):
+                            imdb_id = url_parts[i+1]
+                            slug = url_parts[i+2]
+                            # Parameters dict for url_for function
+                            yield 'movie_page', {'imdb_id': imdb_id, 'slug': slug}
+                            break
+        except Exception as e:
+            print(f"Error adding movie to sitemap generator: {str(e)}")
+            continue
 
 # Input validation helper
 def validate_imdb_id(imdb_id):
@@ -532,17 +570,41 @@ def search_combined():
 def update_sitemap_entry(imdb_id, title, year, priority=0.5):
     """Update sitemap with new movie entry"""
     try:
+        # Validate inputs
+        if not imdb_id or not title:
+            print(f"Missing required data for sitemap entry: imdb_id={imdb_id}, title={title}")
+            return
+            
+        # Create slug and URL
         movie_slug = slugify(f"{title}-{year}")
         movie_url = url_for('movie_page', imdb_id=imdb_id, slug=movie_slug, _external=True)
         
+        # Don't add duplicate entries
+        if any(m['url'] == movie_url for m in SITEMAP_CACHE['recently_viewed']):
+            # Update the timestamp on the existing entry to keep it fresh
+            for m in SITEMAP_CACHE['recently_viewed']:
+                if m['url'] == movie_url:
+                    m['timestamp'] = datetime.now()
+                    m['lastmod'] = datetime.now().strftime('%Y-%m-%d')
+                    break
+            return
+        
         # Add to recently viewed with timestamp
         current_time = datetime.now()
+        
+        # Store movie details
+        is_new_release = int(year) >= datetime.now().year - 1 if year else False
+        
         SITEMAP_CACHE['recently_viewed'].append({
             'url': movie_url,
             'title': title,
+            'year': year,
+            'imdb_id': imdb_id,
+            'slug': movie_slug,
             'lastmod': current_time.strftime('%Y-%m-%d'),
-            'priority': priority,
-            'timestamp': current_time
+            'priority': 0.9 if is_new_release else priority,  # Higher priority for new releases
+            'timestamp': current_time,
+            'is_new_release': is_new_release
         })
         
         # Keep only last 100 entries
@@ -552,15 +614,19 @@ def update_sitemap_entry(imdb_id, title, year, priority=0.5):
             reverse=True
         )[:100]
         
-        # Invalidate sitemap cache
+        print(f"Added movie to sitemap: {title} ({year}) - {imdb_id}")
+        
+        # Invalidate sitemap cache to force regeneration
         SITEMAP_CACHE['last_updated'] = None
+        SITEMAP_CACHE['content'] = None
         
     except Exception as e:
         print(f"Error updating sitemap: {str(e)}")
+        traceback.print_exc()
 
 @app.route('/sitemap.xml')
-def sitemap():
-    """Generate dynamic sitemap"""
+def custom_sitemap():
+    """Generate dynamic sitemap with proper XML namespaces and styling"""
     try:
         # Check if we have a cached version that's less than 1 hour old
         if (SITEMAP_CACHE['last_updated'] and 
@@ -568,48 +634,135 @@ def sitemap():
             SITEMAP_CACHE['content']):
             return Response(SITEMAP_CACHE['content'], mimetype='application/xml')
 
-        # Create new sitemap
-        urlset = ET.Element('urlset', xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
+        # Force-populate with popular movies if empty
+        if not SITEMAP_CACHE['recently_viewed']:
+            # Add some popular movies to the sitemap
+            popular_movies = [
+                {'imdb_id': 'tt0111161', 'title': 'The Shawshank Redemption', 'year': '1994'},
+                {'imdb_id': 'tt0068646', 'title': 'The Godfather', 'year': '1972'},
+                {'imdb_id': 'tt0071562', 'title': 'The Godfather: Part II', 'year': '1974'},
+                {'imdb_id': 'tt0468569', 'title': 'The Dark Knight', 'year': '2008'},
+                {'imdb_id': 'tt0167260', 'title': 'The Lord of the Rings: The Return of the King', 'year': '2003'},
+                {'imdb_id': 'tt1375666', 'title': 'Inception', 'year': '2010'},
+                {'imdb_id': 'tt0133093', 'title': 'The Matrix', 'year': '1999'},
+                {'imdb_id': 'tt0109830', 'title': 'Forrest Gump', 'year': '1994'},
+                {'imdb_id': 'tt0167261', 'title': 'The Lord of the Rings: The Two Towers', 'year': '2002'},
+                {'imdb_id': 'tt0080684', 'title': 'Star Wars: Episode V - The Empire Strikes Back', 'year': '1980'}
+            ]
+            
+            # Add each movie to the sitemap cache
+            for movie in popular_movies:
+                update_sitemap_entry(movie['imdb_id'], movie['title'], movie['year'], 0.7)
+
+        # Create new sitemap with proper namespaces and stylesheet
+        xml_pi = '<?xml version="1.0" encoding="UTF-8"?>\n'
+        stylesheet_pi = '<?xml-stylesheet type="text/xsl" href="/static/sitemap.xsl"?>\n'
         
-        # Add static pages
-        static_pages = ['index', 'watchlist', 'about', 'privacy']
-        for page in static_pages:
-            url = ET.SubElement(urlset, 'url')
-            loc = ET.SubElement(url, 'loc')
-            loc.text = url_for(page, _external=True)
-            lastmod = ET.SubElement(url, 'lastmod')
-            lastmod.text = datetime.now().strftime('%Y-%m-%d')
-            priority = ET.SubElement(url, 'priority')
-            priority.text = '0.8' if page == 'index' else '0.6'
+        urlset = ET.Element('urlset', {
+            'xmlns': 'http://www.sitemaps.org/schemas/sitemap/0.9',
+            'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+            'xsi:schemaLocation': 'http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd'
+        })
         
-        # Add recently viewed movies
+        # Only include user-facing pages, not API endpoints or utility routes
+        user_facing_pages = [
+            {'route': 'index', 'priority': '0.8', 'changefreq': 'daily'},
+            {'route': 'watchlist', 'priority': '0.6', 'changefreq': 'weekly'},
+            {'route': 'about', 'priority': '0.5', 'changefreq': 'monthly'},
+            {'route': 'privacy', 'priority': '0.5', 'changefreq': 'monthly'}
+        ]
+        
+        # Keep track of included URLs to avoid duplicates
+        included_urls = set()
+        
+        for page in user_facing_pages:
+            try:
+                page_url = url_for(page['route'], _external=True)
+                
+                # Skip if URL already included
+                if page_url in included_urls:
+                    continue
+                    
+                included_urls.add(page_url)
+                
+                url = ET.SubElement(urlset, 'url')
+                loc = ET.SubElement(url, 'loc')
+                loc.text = page_url
+                lastmod = ET.SubElement(url, 'lastmod')
+                lastmod.text = datetime.now().strftime('%Y-%m-%d')
+                changefreq = ET.SubElement(url, 'changefreq')
+                changefreq.text = page['changefreq']
+                priority = ET.SubElement(url, 'priority')
+                priority.text = page['priority']
+            except Exception as e:
+                print(f"Error adding {page['route']} to sitemap: {str(e)}")
+                continue
+        
+        # Add movies - ensuring no duplicates
+        added_movie_count = 0
         for movie in SITEMAP_CACHE['recently_viewed']:
-            url = ET.SubElement(urlset, 'url')
-            loc = ET.SubElement(url, 'loc')
-            loc.text = movie['url']
-            lastmod = ET.SubElement(url, 'lastmod')
-            lastmod.text = movie['lastmod']
-            priority = ET.SubElement(url, 'priority')
-            priority.text = str(movie['priority'])
-        
-        # Generate XML
-        sitemap_content = ET.tostring(urlset, encoding='unicode')
+            try:
+                # Skip if URL already included
+                if movie['url'] in included_urls:
+                    continue
+                    
+                included_urls.add(movie['url'])
+                
+                url = ET.SubElement(urlset, 'url')
+                loc = ET.SubElement(url, 'loc')
+                loc.text = movie['url']
+                lastmod = ET.SubElement(url, 'lastmod')
+                lastmod.text = movie['lastmod']
+                changefreq = ET.SubElement(url, 'changefreq')
+                changefreq.text = 'weekly'
+                priority = ET.SubElement(url, 'priority')
+                priority.text = str(movie['priority'])
+                added_movie_count += 1
+            except Exception as e:
+                print(f"Error adding movie {movie.get('title', 'unknown')} to sitemap: {str(e)}")
+                continue
+                
+        print(f"Added {added_movie_count} movies to sitemap")
+            
+        # Generate XML with XML declaration and stylesheet
+        sitemap_content = xml_pi + stylesheet_pi + ET.tostring(urlset, encoding='unicode')
         
         # Cache the result
         SITEMAP_CACHE['content'] = sitemap_content
         SITEMAP_CACHE['last_updated'] = datetime.now()
         
+        # Create sitemap stylesheet if it doesn't exist
+        create_sitemap_stylesheet()
+        
         return Response(sitemap_content, mimetype='application/xml')
     except Exception as e:
         print(f"Error generating sitemap: {str(e)}")
-        return Response(status=500)
+        traceback.print_exc()
+        return Response(f"<!-- Error generating sitemap: {str(e)} -->", status=500, mimetype='application/xml')
+
+# Add missing routes referenced in sitemap
+@app.route('/about')
+def about():
+    """About page"""
+    return render_template('about.html')
+
+@app.route('/privacy')
+def privacy():
+    """Privacy policy page"""
+    return render_template('privacy.html')
 
 @app.route('/robots.txt')
 def robots():
-    """Generate robots.txt"""
+    """Generate robots.txt with rules for search engines"""
     robots_content = f"""User-agent: *
 Allow: /
-Sitemap: {url_for('sitemap', _external=True)}
+Disallow: /stream
+Disallow: /search_movies
+Disallow: /get_movie_details
+Disallow: /get_similar_movies
+Disallow: /search_combined
+Disallow: /update-sitemap
+Sitemap: {url_for('custom_sitemap', _external=True)}
 
 # Optimize crawling
 Crawl-delay: 1
@@ -664,6 +817,261 @@ def handle_exception(e):
         error=message,
         code=500,
         suggestion=suggestion), 500
+
+@app.route('/update-sitemap')
+@limiter.limit("1 per minute")
+def update_sitemap():
+    """Force update the sitemap with popular movies"""
+    if not request.args.get('key') == app.config['SECRET_KEY']:
+        return Response("Unauthorized", status=401)
+        
+    try:
+        # Clear existing cache to rebuild from scratch
+        SITEMAP_CACHE['recently_viewed'] = []
+        
+        # Add some popular movies to the sitemap
+        popular_movies = [
+            {'imdb_id': 'tt0111161', 'title': 'The Shawshank Redemption', 'year': '1994'},
+            {'imdb_id': 'tt0068646', 'title': 'The Godfather', 'year': '1972'},
+            {'imdb_id': 'tt0071562', 'title': 'The Godfather: Part II', 'year': '1974'},
+            {'imdb_id': 'tt0468569', 'title': 'The Dark Knight', 'year': '2008'},
+            {'imdb_id': 'tt0167260', 'title': 'The Lord of the Rings: The Return of the King', 'year': '2003'},
+            {'imdb_id': 'tt1375666', 'title': 'Inception', 'year': '2010'},
+            {'imdb_id': 'tt0133093', 'title': 'The Matrix', 'year': '1999'},
+            {'imdb_id': 'tt0109830', 'title': 'Forrest Gump', 'year': '1994'},
+            {'imdb_id': 'tt0167261', 'title': 'The Lord of the Rings: The Two Towers', 'year': '2002'},
+            {'imdb_id': 'tt0080684', 'title': 'Star Wars: Episode V - The Empire Strikes Back', 'year': '1980'}
+        ]
+        
+        # Add recent movies with higher priority
+        recent_movies = [
+            {'imdb_id': 'tt10366206', 'title': 'John Wick: Chapter 4', 'year': '2023'},
+            {'imdb_id': 'tt1630029', 'title': 'Avatar: The Way of Water', 'year': '2022'},
+            {'imdb_id': 'tt5433140', 'title': 'Fast X', 'year': '2023'},
+            {'imdb_id': 'tt1517268', 'title': 'Barbie', 'year': '2023'},
+            {'imdb_id': 'tt15398776', 'title': 'Oppenheimer', 'year': '2023'}
+        ]
+        
+        # Add all movies to the sitemap
+        for movie in popular_movies:
+            update_sitemap_entry(movie['imdb_id'], movie['title'], movie['year'], 0.7)
+            
+        # Add recent movies with higher priority
+        for movie in recent_movies:
+            update_sitemap_entry(movie['imdb_id'], movie['title'], movie['year'], 0.9)
+        
+        # Create or update the sitemap stylesheet
+        create_sitemap_stylesheet()
+        
+        # Force sitemap regeneration
+        SITEMAP_CACHE['last_updated'] = None
+        sitemap_content = custom_sitemap().get_data(as_text=True)
+        
+        # Check if the sitemap was successfully generated
+        url_count = sitemap_content.count('<url>')
+        movie_count = len(SITEMAP_CACHE['recently_viewed'])
+        
+        return Response(f"Sitemap updated with {url_count} URLs ({movie_count} movies)", mimetype='text/plain')
+    except Exception as e:
+        print(f"Error updating sitemap: {str(e)}")
+        traceback.print_exc()
+        return Response(f"Error updating sitemap: {str(e)}", status=500, mimetype='text/plain')
+
+def create_sitemap_stylesheet():
+    """Create XSL stylesheet for sitemap if it doesn't exist"""
+    try:
+        # Ensure static directory exists
+        os.makedirs('static', exist_ok=True)
+        
+        # Path to the stylesheet
+        stylesheet_path = os.path.join('static', 'sitemap.xsl')
+        
+        # Skip if file already exists
+        if os.path.exists(stylesheet_path):
+            return
+            
+        # XSL stylesheet content for nice sitemap display
+        xsl_content = '''<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet version="2.0" 
+    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+<xsl:template match="/">
+<html lang="en">
+<head>
+    <title>XML Sitemap - IMDBies</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+            color: #333;
+            background-color: #f8f9fa;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #e50914;
+            color: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin: 0;
+            padding: 0;
+            font-size: 24px;
+        }
+        .stats {
+            background-color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        th {
+            background-color: #343a40;
+            color: white;
+            text-align: left;
+            padding: 12px 15px;
+        }
+        td {
+            padding: 10px 15px;
+            border-top: 1px solid #f2f2f2;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        a {
+            color: #e50914;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .priority-high {
+            background-color: #28a745;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+        .priority-medium {
+            background-color: #ffc107;
+            color: #333;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+        .priority-low {
+            background-color: #6c757d;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        @media (max-width: 768px) {
+            th, td {
+                padding: 8px 10px;
+            }
+            .url-column {
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>IMDBies XML Sitemap</h1>
+    </div>
+    
+    <div class="stats">
+        <p>This sitemap contains <strong><xsl:value-of select="count(sitemap:urlset/sitemap:url)"/></strong> URLs.</p>
+    </div>
+    
+    <table>
+        <tr>
+            <th width="60%">URL</th>
+            <th>Last Modified</th>
+            <th>Change Frequency</th>
+            <th>Priority</th>
+        </tr>
+        <xsl:for-each select="sitemap:urlset/sitemap:url">
+        <tr>
+            <td class="url-column">
+                <a href="{sitemap:loc}"><xsl:value-of select="sitemap:loc"/></a>
+            </td>
+            <td><xsl:value-of select="sitemap:lastmod"/></td>
+            <td><xsl:value-of select="sitemap:changefreq"/></td>
+            <td>
+                <xsl:choose>
+                    <xsl:when test="number(sitemap:priority) >= 0.8">
+                        <span class="priority-high"><xsl:value-of select="sitemap:priority"/></span>
+                    </xsl:when>
+                    <xsl:when test="number(sitemap:priority) >= 0.6">
+                        <span class="priority-medium"><xsl:value-of select="sitemap:priority"/></span>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <span class="priority-low"><xsl:value-of select="sitemap:priority"/></span>
+                    </xsl:otherwise>
+                </xsl:choose>
+            </td>
+        </tr>
+        </xsl:for-each>
+    </table>
+    
+    <div class="footer">
+        <p>Generated by IMDBies - Your Ultimate Movie Streaming Destination</p>
+    </div>
+</body>
+</html>
+</xsl:template>
+
+</xsl:stylesheet>
+'''
+        
+        # Write the stylesheet to the file
+        with open(stylesheet_path, 'w', encoding='utf-8') as f:
+            f.write(xsl_content)
+            
+        print(f"Created sitemap stylesheet at {stylesheet_path}")
+        
+    except Exception as e:
+        print(f"Error creating sitemap stylesheet: {str(e)}")
+        traceback.print_exc()
+
+@app.route('/sitemap.xsl')
+def serve_sitemap_xsl():
+    """Serve the sitemap XSL stylesheet"""
+    try:
+        # Create the stylesheet if it doesn't exist
+        create_sitemap_stylesheet()
+        
+        # Return the stylesheet
+        return app.send_static_file('sitemap.xsl')
+    except Exception as e:
+        print(f"Error serving sitemap.xsl: {str(e)}")
+        traceback.print_exc()
+        return Response("Error serving sitemap stylesheet", status=500)
 
 if __name__ == "__main__":
     # Create static directory if it doesn't exist

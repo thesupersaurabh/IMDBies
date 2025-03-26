@@ -16,6 +16,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="format-detection" content="telephone=no">
     
+    <!-- Custom Meta Tags -->
+    {% block meta %}{% endblock %}
+    
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.url }}">
@@ -454,6 +457,24 @@
             
             // Update watchlist count
             updateWatchlistCount();
+            
+            // Check if we are on a movie page to update the sitemap
+            const urlParts = window.location.pathname.split('/');
+            if (urlParts.length > 2 && urlParts[1] === 'movie') {
+                // This is a movie page, get the IMDb ID
+                const imdbId = urlParts[2];
+                // Store viewed movies in local storage to avoid excessive updates
+                const viewedMovies = JSON.parse(localStorage.getItem('viewedMovies') || '[]');
+                if (!viewedMovies.includes(imdbId)) {
+                    // Add to viewed movies
+                    viewedMovies.push(imdbId);
+                    // Keep last 100 movies
+                    if (viewedMovies.length > 100) {
+                        viewedMovies.shift();
+                    }
+                    localStorage.setItem('viewedMovies', JSON.stringify(viewedMovies));
+                }
+            }
         });
     </script>
 </body>
