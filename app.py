@@ -530,44 +530,29 @@ def search_combined():
         return jsonify({'error': str(e)})
 
 def update_sitemap_entry(imdb_id, title, year, priority=0.5):
-    """Update sitemap with new movie entry and metadata"""
+    """Update sitemap with new movie entry"""
     try:
         movie_slug = slugify(f"{title}-{year}")
         movie_url = url_for('movie_page', imdb_id=imdb_id, slug=movie_slug, _external=True)
         
-        # Get movie details for rich metadata
-        movie = cinema_goer.get_movie(imdb_id.replace('tt', ''))
+        # Add to recently viewed with timestamp
         current_time = datetime.now()
-        
-        # Calculate priority based on various factors
-        current_year = datetime.now().year
-        movie_year = int(year) if year else current_year
-        base_priority = min(0.9, 0.5 + (0.4 if movie_year >= current_year - 1 else 0.0))
-        
-        # Boost priority for popular movies
-        if movie and movie.get('rating', 0) > 7.0:
-            base_priority = min(0.95, base_priority + 0.1)
-        
-        entry = {
+        SITEMAP_CACHE['recently_viewed'].append({
             'url': movie_url,
             'title': title,
             'lastmod': current_time.strftime('%Y-%m-%d'),
-            'priority': base_priority,
-            'timestamp': current_time,
-            'thumbnail': movie.get('cover url', '').replace('._V1_SX300', '._V1_SX600') if movie else None
-        }
+            'priority': priority,
+            'timestamp': current_time
+        })
         
-        # Add to recently viewed
-        SITEMAP_CACHE['recently_viewed'].append(entry)
-        
-        # Keep only last 1000 entries, sorted by priority and timestamp
+        # Keep only last 100 entries
         SITEMAP_CACHE['recently_viewed'] = sorted(
             SITEMAP_CACHE['recently_viewed'],
-            key=lambda x: (-x['priority'], x['timestamp']),
+            key=lambda x: x['timestamp'],
             reverse=True
-        )[:1000]
+        )[:100]
         
-        # Invalidate sitemap cache to regenerate with new entry
+        # Invalidate sitemap cache
         SITEMAP_CACHE['last_updated'] = None
         
     except Exception as e:
@@ -575,89 +560,48 @@ def update_sitemap_entry(imdb_id, title, year, priority=0.5):
 
 @app.route('/sitemap.xml')
 def sitemap():
-    """Generate dynamic sitemap with XSLT styling"""
+    """Generate dynamic sitemap"""
     try:
-        # Get base URL
-        base_url = request.url_root.rstrip('/')
-        current_date = datetime.now().strftime("%Y-%m-%d")
+        # Check if we have a cached version that's less than 1 hour old
+        if (SITEMAP_CACHE['last_updated'] and 
+            datetime.now() - SITEMAP_CACHE['last_updated'] < timedelta(hours=1) and
+            SITEMAP_CACHE['content']):
+            return Response(SITEMAP_CACHE['content'], mimetype='application/xml')
 
-        # Start with XML declaration and stylesheet reference
-        xml_parts = [
-            '<?xml version="1.0" encoding="UTF-8"?>',
-            '<?xml-stylesheet type="text/xsl" href="/static/sitemap.xsl"?>',
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"',
-            '        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
-            '        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9',
-            '        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">',
-        ]
-
-        # Add static pages
-        static_pages = [
-            ('/', 1.0, 'daily'),
-            ('/watchlist', 0.8, 'daily'),
-            ('/search', 0.8, 'always'),
-            ('/about', 0.6, 'weekly'),
-            ('/privacy', 0.6, 'monthly')
-        ]
-
-        for path, priority, changefreq in static_pages:
-            xml_parts.extend([
-                '    <url>',
-                f'        <loc>{base_url}{path}</loc>',
-                f'        <lastmod>{current_date}</lastmod>',
-                f'        <changefreq>{changefreq}</changefreq>',
-                f'        <priority>{priority}</priority>',
-                '    </url>'
-            ])
-
-        # Add popular movies
-        popular_movies = [
-            ('tt0111161', 'The Shawshank Redemption', '1994'),
-            ('tt0068646', 'The Godfather', '1972'),
-            ('tt0468569', 'The Dark Knight', '2008'),
-            ('tt0167260', 'The Lord of the Rings: The Return of the King', '2003'),
-            ('tt0137523', 'Fight Club', '1999')
-        ]
-
-        for imdb_id, title, year in popular_movies:
-            movie_slug = slugify(f"{title}-{year}")
-            movie_url = f"{base_url}/movie/{imdb_id}/{movie_slug}"
-            xml_parts.extend([
-                '    <url>',
-                f'        <loc>{movie_url}</loc>',
-                f'        <lastmod>{current_date}</lastmod>',
-                f'        <changefreq>weekly</changefreq>',
-                f'        <priority>0.8</priority>',
-                '    </url>'
-            ])
-
-        # Add recently viewed movies
-        if SITEMAP_CACHE['recently_viewed']:
-            for movie in SITEMAP_CACHE['recently_viewed']:
-                xml_parts.extend([
-                    '    <url>',
-                    f'        <loc>{movie["url"]}</loc>',
-                    f'        <lastmod>{movie["lastmod"]}</lastmod>',
-                    f'        <changefreq>weekly</changefreq>',
-                    f'        <priority>{movie["priority"]}</priority>',
-                    '    </url>'
-                ])
-
-        # Close urlset
-        xml_parts.append('</urlset>')
-
-        # Join all parts and create response
-        xml_content = '\n'.join(xml_parts)
+        # Create new sitemap
+        urlset = ET.Element('urlset', xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")
         
-        # Set response headers
-        response = make_response(xml_content)
-        response.headers['Content-Type'] = 'application/xml; charset=UTF-8'
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        return response
-
+        # Add static pages
+        static_pages = ['index', 'watchlist', 'about', 'privacy']
+        for page in static_pages:
+            url = ET.SubElement(urlset, 'url')
+            loc = ET.SubElement(url, 'loc')
+            loc.text = url_for(page, _external=True)
+            lastmod = ET.SubElement(url, 'lastmod')
+            lastmod.text = datetime.now().strftime('%Y-%m-%d')
+            priority = ET.SubElement(url, 'priority')
+            priority.text = '0.8' if page == 'index' else '0.6'
+        
+        # Add recently viewed movies
+        for movie in SITEMAP_CACHE['recently_viewed']:
+            url = ET.SubElement(urlset, 'url')
+            loc = ET.SubElement(url, 'loc')
+            loc.text = movie['url']
+            lastmod = ET.SubElement(url, 'lastmod')
+            lastmod.text = movie['lastmod']
+            priority = ET.SubElement(url, 'priority')
+            priority.text = str(movie['priority'])
+        
+        # Generate XML
+        sitemap_content = ET.tostring(urlset, encoding='unicode')
+        
+        # Cache the result
+        SITEMAP_CACHE['content'] = sitemap_content
+        SITEMAP_CACHE['last_updated'] = datetime.now()
+        
+        return Response(sitemap_content, mimetype='application/xml')
     except Exception as e:
         print(f"Error generating sitemap: {str(e)}")
-        traceback.print_exc()
         return Response(status=500)
 
 @app.route('/robots.txt')
@@ -671,20 +615,6 @@ Sitemap: {url_for('sitemap', _external=True)}
 Crawl-delay: 1
 """
     return Response(robots_content, mimetype='text/plain')
-
-@app.route('/static/sitemap.xsl')
-def serve_sitemap_xsl():
-    """Serve the XSLT stylesheet for the sitemap"""
-    try:
-        with open('static/sitemap.xsl', 'r', encoding='utf-8') as f:
-            xsl_content = f.read()
-        response = make_response(xsl_content)
-        response.headers['Content-Type'] = 'application/xslt+xml; charset=UTF-8'
-        response.headers['X-Content-Type-Options'] = 'nosniff'
-        return response
-    except Exception as e:
-        print(f"Error serving sitemap.xsl: {str(e)}")
-        return Response(status=404)
 
 # Custom error handlers
 @app.errorhandler(404)
