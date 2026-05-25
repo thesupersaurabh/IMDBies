@@ -6,24 +6,31 @@
 {% block og_description %}Stream your favorite movies and TV shows instantly. High quality, unlimited streaming.{% endblock %}
 
 {% block content %}
-<div class="search-section py-4">
+<div class="search-section py-5 fade-in">
+    <div class="container text-center mb-5">
+        <h1 class="display-3 mb-4" style="font-weight: 700; letter-spacing: 2px;">DISCOVER<br><span style="color: var(--primary-color);">CINEMA</span></h1>
+        <p class="lead text-secondary mx-auto" style="max-width: 600px;">Stream your favorite movies and TV shows instantly. High quality, unlimited streaming.</p>
+    </div>
+    
     <div class="container">
         <div class="search-container">
             <div class="search-box">
-                <input type="text" id="keyword" class="search-input" placeholder="Search for movies and TV shows...">
-                <div class="search-actions">
-                    <button class="btn btn-outline-light me-2" type="button" data-bs-toggle="collapse" data-bs-target="#filterOptions">
-                        <i class="fas fa-filter"></i>
+                <input type="text" id="keyword" class="search-input" placeholder="Search for titles, genres...">
+                <div class="search-actions d-flex">
+                    <button class="btn" type="button" data-bs-toggle="collapse" data-bs-target="#filterOptions">
+                        <i class="fas fa-filter text-secondary"></i>
                     </button>
-                <button class="btn btn-primary" type="button" onclick="searchMovies()">
-                    <i class="fas fa-search"></i>
-                </button>
+                    <button class="btn btn-primary" type="button" onclick="searchMovies()">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
             </div>
-        </div>
-            <div class="collapse mt-3" id="filterOptions">
-                <div class="filter-container">
-                    <div class="row g-3">
+            
+            <div class="collapse mt-4" id="filterOptions">
+                <div class="filter-container p-4" style="background: var(--input-bg); border: 1px solid var(--input-border);">
+                    <div class="row g-4">
                         <div class="col-md-4">
+                            <label class="form-label text-secondary text-uppercase mb-2" style="font-family: var(--font-display); font-size: 0.8rem; letter-spacing: 1px;">Content Type</label>
                             <select class="form-select" id="contentType">
                                 <option value="">All Content</option>
                                 <option value="movie">Movies Only</option>
@@ -31,6 +38,7 @@
                             </select>
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label text-secondary text-uppercase mb-2" style="font-family: var(--font-display); font-size: 0.8rem; letter-spacing: 1px;">Rating</label>
                             <select class="form-select" id="rating">
                                 <option value="">Any Rating</option>
                                 <option value="8">8+ Rating</option>
@@ -39,6 +47,7 @@
                             </select>
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label text-secondary text-uppercase mb-2" style="font-family: var(--font-display); font-size: 0.8rem; letter-spacing: 1px;">Sort By</label>
                             <select class="form-select" id="sortBy">
                                 <option value="relevance">Relevance</option>
                                 <option value="rating">Rating</option>
@@ -164,32 +173,16 @@
 </div>
 
 <style>
-    .welcome-section {
-        background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('/static/cinema.jpg');
-        background-size: cover;
-        background-position: center;
-        color: var(--text-primary);
-    }
-
-    .welcome-card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        border-radius: 16px;
-        padding: 2rem;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
     .welcome-content {
         font-size: 0.95rem;
         line-height: 1.6;
     }
 
     .legal-notice {
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 8px;
+        background: var(--input-bg);
+        border: 1px solid var(--input-border);
         padding: 1.5rem;
         margin-top: 2rem;
-        border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .legal-notice ul {
@@ -202,204 +195,155 @@
     }
 
     .movie-card {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        overflow: hidden;
-        transition: transform 0.3s ease;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        height: 100%;
+        background: transparent;
+        border: none;
         position: relative;
+        overflow: hidden;
+        margin-bottom: 2rem;
+        transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     }
 
     .movie-card:hover {
-        transform: translateY(-5px);
+        transform: translateY(-8px);
+    }
+    
+    .movie-card .position-relative {
+        overflow: hidden;
+        aspect-ratio: 2/3;
+        background: var(--surface-color);
     }
 
     .movie-rating-badge {
         position: absolute;
-        top: 10px;
-        left: 10px;
-        background: rgba(0, 0, 0, 0.8);
-        color: #ffd700;
-        padding: 0.5rem 0.75rem;
-        border-radius: 20px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        backdrop-filter: blur(5px);
+        top: 15px;
+        left: 15px;
+        background: var(--primary-color);
+        color: #fff;
+        padding: 0.4rem 0.8rem;
+        font-family: var(--font-display);
+        letter-spacing: 1px;
+        font-weight: 500;
+        font-size: 0.9rem;
         z-index: 2;
     }
 
     .movie-rating-badge i {
-        color: #ffd700;
+        color: #fff;
+        font-size: 0.8rem;
+        margin-right: 4px;
     }
 
     .movie-card .movie-actions {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        top: 15px;
+        right: 15px;
         display: flex;
+        flex-direction: column;
         gap: 8px;
         opacity: 0;
-        transition: opacity 0.3s ease;
+        transform: translateX(10px);
+        transition: all 0.3s ease;
         z-index: 2;
     }
 
     .movie-card:hover .movie-actions {
         opacity: 1;
+        transform: translateX(0);
     }
 
     .movie-card .action-btn {
-        width: 35px;
-        height: 35px;
-        border-radius: 50%;
-        background: rgba(0, 0, 0, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: white;
+        width: 40px;
+        height: 40px;
+        background: var(--surface-color);
+        border: 1px solid var(--input-border);
+        color: var(--text-primary);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         transition: all 0.3s ease;
-        backdrop-filter: blur(5px);
     }
 
     .movie-card .action-btn:hover {
         background: var(--primary-color);
-        transform: scale(1.1);
+        border-color: var(--primary-color);
+        color: #fff;
     }
 
     .movie-card .action-btn.active {
         background: var(--primary-color);
         border-color: var(--primary-color);
+        color: #fff;
     }
 
-    .movie-card img {
+    .movie-card img.movie-thumbnail {
         width: 100%;
-        height: 300px;
+        height: 100%;
         object-fit: cover;
-        object-position: center;
+        transition: transform 0.7s ease;
+    }
+    
+    .movie-card:hover img.movie-thumbnail {
+        transform: scale(1.05);
     }
 
     .movie-card .card-body {
-        padding: 1rem;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        color: white;
+        padding: 1.5rem 0;
+        background: transparent;
     }
 
     .movie-card .card-title {
-        font-size: 1rem;
-        margin-bottom: 0.5rem;
-        line-height: 1.3;
-        color: white;
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 0.25rem;
+        color: var(--text-primary);
     }
 
     .movie-card .text-muted {
         font-size: 0.9rem;
-        color: rgba(255, 255, 255, 0.7) !important;
+        color: var(--text-secondary) !important;
+        font-family: var(--font-body);
+        font-weight: 300;
     }
 
     .movie-card .btn-watch {
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 20px;
-        padding: 0.5rem 1rem;
-        font-size: 0.9rem;
+        background: transparent;
+        color: var(--text-primary);
+        border: 1px solid var(--text-primary);
+        padding: 0.6rem 0;
+        font-size: 0.85rem;
         transition: all 0.3s ease;
         width: 100%;
-        margin-top: 0.5rem;
+        margin-top: 1rem;
     }
 
     .movie-card .btn-watch:hover {
-        transform: scale(1.05);
-        background: var(--primary-color-hover);
+        background: var(--text-primary);
+        color: var(--secondary-color);
     }
 
-    .hero-section {
-        background: linear-gradient(135deg, rgba(26, 29, 36, 0.95) 0%, rgba(23, 24, 28, 0.95) 100%);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 6rem 0 4rem;
+    .floating-menu {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 100;
     }
-
-    .text-gradient {
-        background: linear-gradient(45deg, var(--primary-color), #ff4b2b);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .search-container {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-
-    .search-box {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 0;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-    }
-
-    .search-box:focus-within {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px rgba(229, 9, 20, 0.2);
-    }
-
-    .search-input {
-        background: transparent;
-        border: none;
-        color: var(--text-primary);
-        padding: 1rem 1.5rem;
-        font-size: 1.1rem;
-        width: 100%;
-        height: 100%;
-    }
-
-    .search-input:focus {
-        outline: none;
-        box-shadow: none;
-    }
-
-    .search-input::placeholder {
-        color: var(--text-secondary);
-    }
-
-    .search-box .btn {
-        margin: 0.5rem;
-        padding: 0.75rem;
-        border-radius: 8px;
-        min-width: 45px;
-        height: 45px;
+    
+    .floating-menu .btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-    }
-
-    .search-box .btn i {
-        font-size: 1.1rem;
-    }
-
-    @media (max-width: 768px) {
-        .hero-section {
-            padding: 4rem 0 2rem;
-        }
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
     }
 
     .card {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--surface-color);
+        border: 1px solid var(--input-border);
         transition: all 0.3s ease;
     }
 
@@ -451,15 +395,16 @@
     }
 
     .modal-content {
-        background: rgba(25, 25, 25, 0.95);
+        background: var(--modal-bg);
         backdrop-filter: blur(10px);
         border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--card-border);
         box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        color: var(--text-primary);
     }
 
     .modal-header {
-        border-bottom-color: rgba(255, 255, 255, 0.1);
+        border-bottom-color: var(--card-border);
         padding: 1.5rem;
     }
 
@@ -848,7 +793,7 @@ const CULT_MOVIES_DATA = [
         "title": "The Godfather",
         "year": "1972",
         "rating": "9.2",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BM2MyNjYxNmUtYTAwNi00MTYxLWJmNWYtYzZlODY3ZTk3OTFlXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BM2MyNjYxNmUtYTAwNi00MTYxLWJmNWYtYzZlODY3ZTk3OTFlXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -856,7 +801,7 @@ const CULT_MOVIES_DATA = [
         "title": "The Shawshank Redemption",
         "year": "1994",
         "rating": "9.3",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMDFkYTc0MGEtZmNhMC00ZDIzLWFmNTEtODM1ZmRlYWMwMWFmXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMDFkYTc0MGEtZmNhMC00ZDIzLWFmNTEtODM1ZmRlYWMwMWFmXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -864,7 +809,7 @@ const CULT_MOVIES_DATA = [
         "title": "The Godfather Part II",
         "year": "1974",
         "rating": "9.0",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMWMwMGQzZTItY2JlNC00OWZiLWIyMDctNDk2ZDQ2YjRjMWQ0XkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMWMwMGQzZTItY2JlNC00OWZiLWIyMDctNDk2ZDQ2YjRjMWQ0XkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -872,7 +817,7 @@ const CULT_MOVIES_DATA = [
         "title": "12 Angry Men",
         "year": "1957",
         "rating": "9.0",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMWU4N2FjNzYtNTVkNC00NzQ0LTg0MjAtYTJlMjFhNGUxZDFmXkEyXkFqcGdeQXVyNjc1NTYyMjg@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMWU4N2FjNzYtNTVkNC00NzQ0LTg0MjAtYTJlMjFhNGUxZDFmXkEyXkFqcGdeQXVyNjc1NTYyMjg@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -880,7 +825,7 @@ const CULT_MOVIES_DATA = [
         "title": "Schindler's List",
         "year": "1993",
         "rating": "9.0",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNjM1ZDQxYWUtMzQyZS00MTE1LWJmZGYtNGUyNTdlYjM3ZmVmXkEyXkFqcGc@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNjM1ZDQxYWUtMzQyZS00MTE1LWJmZGYtNGUyNTdlYjM3ZmVmXkEyXkFqcGc@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -888,7 +833,7 @@ const CULT_MOVIES_DATA = [
         "title": "Pulp Fiction",
         "year": "1994",
         "rating": "8.9",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNGNhMDIzZTUtNTBlZi00MTRlLWFjM2ItYzViMjE3YzI5MjljXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNGNhMDIzZTUtNTBlZi00MTRlLWFjM2ItYzViMjE3YzI5MjljXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -896,7 +841,7 @@ const CULT_MOVIES_DATA = [
         "title": "Fight Club",
         "year": "1999",
         "rating": "8.8",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMmEzNTkxYjQtZTc0MC00YTVjLTg5ZTEtZWMwOWVlYzY0NWIwXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg", 
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMmEzNTkxYjQtZTc0MC00YTVjLTg5ZTEtZWMwOWVlYzY0NWIwXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX1000.jpg", 
         "is_series": false
     },
     {
@@ -904,7 +849,7 @@ const CULT_MOVIES_DATA = [
         "title": "Forrest Gump",
         "year": "1994",
         "rating": "8.8",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNWIwODRlZTUtY2U3ZS00Yzg1LWJhNzYtMmZiYmEyNmU1NjMzXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNWIwODRlZTUtY2U3ZS00Yzg1LWJhNzYtMmZiYmEyNmU1NjMzXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -912,7 +857,7 @@ const CULT_MOVIES_DATA = [
         "title": "The Lord of the Rings: The Return of the King",
         "year": "2003",
         "rating": "9.0",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzA5ZDNlZWMtM2NhNS00NDJjLTk4NDItYTRmY2EwMWZlMTY3XkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzA5ZDNlZWMtM2NhNS00NDJjLTk4NDItYTRmY2EwMWZlMTY3XkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -920,7 +865,7 @@ const CULT_MOVIES_DATA = [
         "title": "The Lord of the Rings: The Fellowship of the Ring",
         "year": "2001",
         "rating": "8.8",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BN2EyZjM3NzUtNWUzMi00MTgxLWI0NTctMzY4M2VlOTdjZWRiXkEyXkFqcGdeQXVyNDUzOTQ5MjY@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BN2EyZjM3NzUtNWUzMi00MTgxLWI0NTctMzY4M2VlOTdjZWRiXkEyXkFqcGdeQXVyNDUzOTQ5MjY@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -928,7 +873,7 @@ const CULT_MOVIES_DATA = [
         "title": "Star Wars: Episode V - The Empire Strikes Back",
         "year": "1980",
         "rating": "8.7",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BOGUwMDk0Y2MtNjBlNi00NmRiLTk2MWYtMGMyMDlhYmI4ZDBjXkEyXkFqcGc@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BOGUwMDk0Y2MtNjBlNi00NmRiLTk2MWYtMGMyMDlhYmI4ZDBjXkEyXkFqcGc@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -936,7 +881,7 @@ const CULT_MOVIES_DATA = [
         "title": "The Matrix",
         "year": "1999",
         "rating": "8.7",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -944,7 +889,7 @@ const CULT_MOVIES_DATA = [
         "title": "One Flew Over the Cuckoo's Nest",
         "year": "1975", 
         "rating": "8.7",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZjA0OWVhOTAtYWQxNi00YzNhLWI4ZjYtNjFjZTEyYjJlNDVlL2ltYWdlL2ltYWdlXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZjA0OWVhOTAtYWQxNi00YzNhLWI4ZjYtNjFjZTEyYjJlNDVlL2ltYWdlL2ltYWdlXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -952,7 +897,7 @@ const CULT_MOVIES_DATA = [
         "title": "Goodfellas",
         "year": "1990",
         "rating": "8.7",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BY2NkZjEzMDgtN2RjYy00YzM1LWI4ZmQtMjIwYjFjNmI3ZGEwXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BY2NkZjEzMDgtN2RjYy00YzM1LWI4ZmQtMjIwYjFjNmI3ZGEwXkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -960,7 +905,7 @@ const CULT_MOVIES_DATA = [
         "title": "The Silence of the Lambs",
         "year": "1991",
         "rating": "8.6",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNjNhZTk0ZmEtNjJhMi00YzFlLWE1MmEtYzM1M2ZmMGMwMTU4XkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNjNhZTk0ZmEtNjJhMi00YzFlLWE1MmEtYzM1M2ZmMGMwMTU4XkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -968,7 +913,7 @@ const CULT_MOVIES_DATA = [
         "title": "Se7en",
         "year": "1995",
         "rating": "8.6",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BOTUwODM5MTctZjczMi00OTk4LTg3NWUtNmVhMTAzNTNjYjcyXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BOTUwODM5MTctZjczMi00OTk4LTg3NWUtNmVhMTAzNTNjYjcyXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -976,7 +921,7 @@ const CULT_MOVIES_DATA = [
         "title": "Star Wars: Episode IV - A New Hope",
         "year": "1977",
         "rating": "8.6",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzVlY2MwMjktM2E4OS00Y2Y3LWE3ZjctYzhkZGM3YzA1ZWM2XkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzVlY2MwMjktM2E4OS00Y2Y3LWE3ZjctYzhkZGM3YzA1ZWM2XkEyXkFqcGdeQXVyNzkwMjQ5NzM@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -984,7 +929,7 @@ const CULT_MOVIES_DATA = [
         "title": "Seven Samurai",
         "year": "1954",
         "rating": "8.6",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZjliMWExOTMtZDQ3ZS00NWU3LWIyN2EtMjllNzk3ZTNlYzg4XkEyXkFqcGc@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZjliMWExOTMtZDQ3ZS00NWU3LWIyN2EtMjllNzk3ZTNlYzg4XkEyXkFqcGc@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -992,7 +937,7 @@ const CULT_MOVIES_DATA = [
         "title": "It's a Wonderful Life",
         "year": "1946",
         "rating": "8.6",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMDM4OWFhYjEtNTE5Yy00NjcyLTg5N2UtZDQwNDZlYjlmNDU5XkEyXkFqcGc@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMDM4OWFhYjEtNTE5Yy00NjcyLTg5N2UtZDQwNDZlYjlmNDU5XkEyXkFqcGc@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -1000,7 +945,7 @@ const CULT_MOVIES_DATA = [
         "title": "Life Is Beautiful",
         "year": "1997",
         "rating": "8.6",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BYmJmM2Q4NmMtYThmNC00ZjRlLWEyZmItZTIwOTBlZDQ3NTQ1XkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BYmJmM2Q4NmMtYThmNC00ZjRlLWEyZmItZTIwOTBlZDQ3NTQ1XkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -1008,7 +953,7 @@ const CULT_MOVIES_DATA = [
         "title": "Interstellar",
         "year": "2014",
         "rating": "8.6",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -1016,7 +961,7 @@ const CULT_MOVIES_DATA = [
         "title": "Spirited Away",
         "year": "2001",
         "rating": "8.6",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMjlmZmI5MDctNDE2YS00YWE0LWE5ZWItZDBhYWQ0NTcxNWRhXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMjlmZmI5MDctNDE2YS00YWE0LWE5ZWItZDBhYWQ0NTcxNWRhXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -1024,7 +969,7 @@ const CULT_MOVIES_DATA = [
         "title": "The Dark Knight",
         "year": "2008",
         "rating": "9.0",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -1032,7 +977,7 @@ const CULT_MOVIES_DATA = [
         "title": "Blade Runner",
         "year": "1982",
         "rating": "8.1",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzQzMzJhZTEtOWM4NS00MTdhLTg0YjgtMjM4MDRkZjUwZDBlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BNzQzMzJhZTEtOWM4NS00MTdhLTg0YjgtMjM4MDRkZjUwZDBlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX1000.jpg",
         "is_series": false
     },
     {
@@ -1040,7 +985,7 @@ const CULT_MOVIES_DATA = [
         "title": "Back to the Future",
         "year": "1985",
         "rating": "8.5",
-        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZmU0M2Y1OGUtZjIxNi00ZjBkLTg1MjgtOWIyNThiZWIwYjRiXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX300.jpg",
+        "thumbnail": "https://m.media-amazon.com/images/M/MV5BZmU0M2Y1OGUtZjIxNi00ZjBkLTg1MjgtOWIyNThiZWIwYjRiXkEyXkFqcGdeQXVyMTQxNzMzNDI@._V1_SX1000.jpg",
         "is_series": false
     }
 ];
@@ -1237,7 +1182,7 @@ const CULT_MOVIES_DATA = [
         for (const movie of movieData) {
             if (!movie || !movie.imdb_id) continue;
             
-            const thumbnailUrl = movie.thumbnail ? movie.thumbnail.replace(/\._V1_.*\.jpg$/, '._V1_SX300.jpg') : '';
+            const thumbnailUrl = movie.thumbnail ? movie.thumbnail.replace(/\._V1_.*\.jpg$/, '._V1_SX1000.jpg') : '';
             const isInWatchlist = watchlist.some(item => item.imdb_id === movie.imdb_id);
             
             // Format rating consistently
@@ -1731,7 +1676,7 @@ const CULT_MOVIES_DATA = [
             `;
             } else {
             watchlistContent.innerHTML = watchlist.map(movie => {
-                const thumbnailUrl = movie.thumbnail ? movie.thumbnail.replace(/\._V1_.*\.jpg$/, '._V1_SX300.jpg') : '';
+                const thumbnailUrl = movie.thumbnail ? movie.thumbnail.replace(/\._V1_.*\.jpg$/, '._V1_SX1000.jpg') : '';
                 const contentType = movie.is_series ? 'TV Series' : 'Movie';
                 const typeClass = movie.is_series ? 'bg-success' : 'bg-primary';
                 
@@ -1843,7 +1788,7 @@ const CULT_MOVIES_DATA = [
                 if (!movie || !movie.imdb_id) continue;
                 
                 const imdbId = movie.imdb_id;
-                const thumbnailUrl = movie.thumbnail ? movie.thumbnail.replace(/\._V1_.*\.jpg$/, '._V1_SX300.jpg') : '';
+                const thumbnailUrl = movie.thumbnail ? movie.thumbnail.replace(/\._V1_.*\.jpg$/, '._V1_SX1000.jpg') : '';
                 const isInWatchlist = watchlist.some(item => item.imdb_id === imdbId);
                 
                 // Format rating consistently

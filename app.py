@@ -4,7 +4,7 @@ import random
 import json
 from functools import wraps
 import time
-from imdb import IMDb, IMDbError
+import requests as http_requests
 import html
 import re
 from datetime import datetime, timedelta
@@ -16,6 +16,134 @@ from config import config
 from flask_sitemap import Sitemap
 import xml.etree.ElementTree as ET
 from urllib.parse import quote
+
+# ---------------------------------------------------------------------------
+# IMDbOT REST API wrapper — replaces cinemagoer/IMDbPY which is now broken
+# (IMDb's anti-scraping measures block all scraper-based libraries)
+# ---------------------------------------------------------------------------
+IMDBAOT_SEARCH_URL = "https://imdb.iamidiotareyoutoo.com/search"
+
+def imdb_search(keyword, results=20):
+    """Search IMDb via OMDb API. Returns a list of result dicts compatible with previous IMDbOT format."""
+    try:
+        omdb_url = f"https://www.omdbapi.com/?s={quote(keyword)}&apikey=trilogy"
+        resp = http_requests.get(omdb_url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        
+        if data.get('Response') == 'True':
+            items = data.get('Search', [])
+            formatted_items = []
+            for item in items[:results]:
+                formatted_items.append({
+                    '#IMDB_ID': item.get('imdbID', ''),
+                    '#TITLE': item.get('Title', 'Untitled'),
+                    '#YEAR': item.get('Year', ''),
+                    '#IMG_POSTER': item.get('Poster', '') if item.get('Poster') != 'N/A' else '',
+                    '#ACTORS': '' # OMDb search doesn't return actors
+                })
+            return formatted_items
+        return []
+    except Exception as e:
+        print(f"imdb_search error: {e}")
+        return []
+
+def imdb_get_movie(imdb_id):
+    """
+    Fetch movie/show metadata from OMDb (free, no-key tier via rapid lookup).
+    Falls back to the IMDbOT search endpoint using the IMDb ID as a query.
+    Returns a dict with normalised keys, or None on failure.
+    """
+    try:
+        # Clean ID → always 'tt1234567' format
+        if not imdb_id.startswith('tt'):
+            imdb_id = f'tt{imdb_id}'
+
+        # OMDb free endpoint (no API key needed for basic title lookup)
+        omdb_url = f"https://www.omdbapi.com/?i={imdb_id}&apikey=trilogy"
+        resp = http_requests.get(omdb_url, timeout=10)
+        if resp.status_code == 200:
+            d = resp.json()
+            if d.get('Response') == 'True':
+                genres = [g.strip() for g in d.get('Genre', '').split(',') if g.strip()]
+                directors = [dr.strip() for dr in d.get('Director', '').split(',') if dr.strip() and dr.strip() != 'N/A']
+                cast = [a.strip() for a in d.get('Actors', '').split(',') if a.strip() and a.strip() != 'N/A']
+                rating_str = d.get('imdbRating', '')
+                try:
+                    rating = float(rating_str) if rating_str and rating_str != 'N/A' else ''
+                except ValueError:
+                    rating = ''
+                votes_str = d.get('imdbVotes', '').replace(',', '')
+                try:
+                    votes = int(votes_str) if votes_str and votes_str != 'N/A' else ''
+                except ValueError:
+                    votes = ''
+                kind = d.get('Type', 'movie')
+                is_series = kind in ('series', 'episode')
+                return {
+                    'imdb_id': imdb_id,
+                    'title': d.get('Title', 'Untitled'),
+                    'year': d.get('Year', '').split('–')[0],
+                    'genres': genres,
+                    'directors': directors,
+                    'plot': d.get('Plot', ''),
+                    'rating': rating,
+                    'votes': votes,
+                    'cast': cast,
+                    'is_series': is_series,
+                    'thumbnail': d.get('Poster', '') if d.get('Poster') != 'N/A' else '',
+                    'kind': kind,
+                }
+    except Exception as e:
+        print(f"OMDb fetch failed for {imdb_id}: {e}")
+
+    # Fallback: search by IMDb ID string using IMDbOT
+    try:
+        items = imdb_search(imdb_id, results=1)
+        if items:
+            item = items[0]
+            title = item.get('#TITLE', 'Untitled')
+            year = str(item.get('#YEAR', ''))
+            actors = [a.strip() for a in item.get('#ACTORS', '').split(',') if a.strip()]
+            return {
+                'imdb_id': imdb_id,
+                'title': title,
+                'year': year,
+                'genres': [],
+                'directors': [],
+                'plot': '',
+                'rating': '',
+                'votes': '',
+                'cast': actors,
+                'is_series': False,
+                'thumbnail': item.get('#IMG_POSTER', ''),
+                'kind': 'movie',
+            }
+    except Exception as e:
+        print(f"IMDbOT fallback failed for {imdb_id}: {e}")
+
+    return None
+
+def _normalize_search_result(item):
+    """Convert an IMDbOT search result dict to the app's standard format."""
+    raw_id = item.get('#IMDB_ID', '')
+    # Ensure no 'tt' prefix in movieID for backward compat, store full id separately
+    clean_id = raw_id.replace('tt', '') if raw_id.startswith('tt') else raw_id
+    title = item.get('#TITLE', 'Untitled')
+    year = item.get('#YEAR', '')
+    thumbnail = item.get('#IMG_POSTER', '')
+    # IMDbOT doesn't expose kind; treat as movie by default
+    # We check the title/year heuristically for series detection
+    actors = item.get('#ACTORS', '')
+    return {
+        'movieID': clean_id,
+        'imdb_id': raw_id,
+        'title': title,
+        'year': year,
+        'thumbnail': thumbnail,
+        'actors': actors,
+        'kind': 'movie',  # IMDbOT does not expose kind in search results
+    }
 
 # Create Flask app with the correct configuration
 app = Flask(__name__)
@@ -36,7 +164,8 @@ talisman = Talisman(
     force_https=app.config.get('FORCE_HTTPS', False)  # Only force HTTPS in production
 )
 
-cinema_goer = IMDb()
+# cinema_goer = IMDb()  # Removed — IMDbPY/cinemagoer is broken (IMDb blocks scrapers)
+# Using IMDbOT REST API instead (see imdb_search / imdb_get_movie helpers above)
 
 # Cache to store commonly accessed movie details
 MOVIE_CACHE = {}
@@ -169,41 +298,31 @@ def search_movies():
         return jsonify([])
 
     try:
-        # Fix: Map 'tv' from frontend to 'tv series' for backend processing
         searching_for_tv = media_type == 'tv'
         
-        if not searching_for_tv:
-            print(f"Searching for movies with keyword: '{keyword}'")
-            movies = cinema_goer.search_movie(keyword)
-            movies = [m for m in movies if not is_tv_series(m)]
-            print(f"Found {len(movies)} movies")
-        else:
-            print(f"Searching for TV series with keyword: '{keyword}'")
-            # Use a higher result count for TV series to ensure we get enough after filtering
-            movies = cinema_goer.search_movie(keyword, results=40)
-            print(f"Initial search returned {len(movies)} results")
-            # Print kinds for debugging
-            kinds = {m.get('kind', 'unknown') for m in movies}
-            print(f"Content kinds in search results: {kinds}")
-            
-            # Ensure we're only getting TV series using our helper function
-            movies = [m for m in movies if is_tv_series(m)]
-            print(f"Filtered to {len(movies)} TV series")
+        print(f"Searching for {'TV series' if searching_for_tv else 'movies'} with keyword: '{keyword}'")
+        raw_results = imdb_search(keyword, results=40)
+        print(f"IMDbOT returned {len(raw_results)} results")
 
         movie_data = []
-        for movie in movies[:app.config['MAX_SEARCH_RESULTS']]:
-            cover_url = movie.get('cover url', '')
-            if cover_url:
-                cover_url = cover_url.replace('._V1_SX300', '._V1_SX600')
-            
+        for item in raw_results:
+            raw_id = item.get('#IMDB_ID', '')
+            clean_id = raw_id.replace('tt', '') if raw_id.startswith('tt') else raw_id
+            title = item.get('#TITLE', 'Untitled')
+            year = item.get('#YEAR', '')
+            thumbnail = item.get('#IMG_POSTER', '')
+            # IMDbOT doesn't expose kind in search; include all results when not filtering
+            # For type=movie or type=tv we include all (filtering is hard without kind data)
             movie_item = {
-                'imdb_id': movie.movieID,
-                'title': movie.get('title', 'Untitled'),
-                'year': movie.get('year', ''),
-                'thumbnail': cover_url,
-                'is_series': is_tv_series(movie)
+                'imdb_id': raw_id,
+                'title': title,
+                'year': year,
+                'thumbnail': thumbnail,
+                'is_series': False,  # not reliably available from search endpoint
             }
             movie_data.append(movie_item)
+            if len(movie_data) >= app.config['MAX_SEARCH_RESULTS']:
+                break
 
         print(f"Returning {len(movie_data)} results for media_type: {media_type}")
         return jsonify(movie_data)
@@ -228,14 +347,11 @@ def get_movie_details():
         if imdb_id in MOVIE_CACHE and (datetime.now() - MOVIE_CACHE[imdb_id].get('time_added', datetime.now())).total_seconds() < CACHE_TIMEOUT:
             return jsonify(MOVIE_CACHE[imdb_id])
 
-        # Ensure ID is in the correct format
-        clean_id = imdb_id.replace('tt', '')
-        
-        movie = cinema_goer.get_movie(clean_id)
+        movie = imdb_get_movie(imdb_id)
         if not movie:
             return jsonify({'error': 'Movie not found'}), 404
             
-        is_series = is_tv_series(movie)
+        is_series = movie.get('is_series', False)
         
         # Create title slug for SEO
         title = movie.get('title', 'Untitled')
@@ -249,13 +365,13 @@ def get_movie_details():
             'title': title,
             'year': movie.get('year', ''),
             'genres': movie.get('genres', []),
-            'directors': [director['name'] for director in movie.get('directors', [])] if movie.get('directors') else [],
-            'plot': movie.get('plot outline', movie.get('plot', [''])[0] if movie.get('plot') else ''),
+            'directors': movie.get('directors', []),
+            'plot': movie.get('plot', ''),
             'rating': movie.get('rating', ''),
             'votes': movie.get('votes', ''),
-            'cast': [cast['name'] for cast in movie.get('cast', [])[:5]] if movie.get('cast') else [],
+            'cast': movie.get('cast', []),
             'is_series': is_series,
-            'thumbnail': movie.get('cover url', '').replace('._V1_SX300', '._V1_SX600') if movie.get('cover url') else '',
+            'thumbnail': movie.get('thumbnail', ''),
             'seo_url': seo_url,
             'slug': slug
         }
@@ -279,58 +395,58 @@ def get_similar_movies():
         return jsonify([])
 
     try:
-        # Ensure imdb_id format is correct
-        clean_id = imdb_id.replace('tt', '') if imdb_id.startswith('tt') else imdb_id
+        if not imdb_id.startswith('tt'):
+            imdb_id = f'tt{imdb_id}'
             
-        movie = cinema_goer.get_movie(clean_id)
+        movie = imdb_get_movie(imdb_id)
+        if not movie:
+            return jsonify([])
+        
         genres = movie.get('genres', [])
-        is_series = is_tv_series(movie)
+        is_series = movie.get('is_series', False)
         
         # If no genres, return empty list
         if not genres:
-            return jsonify([])
+            # Fallback: search by title for similar content
+            title = movie.get('title', '')
+            if not title:
+                return jsonify([])
+            raw_results = imdb_search(title, results=20)
+            similar_movies = []
+            for item in raw_results:
+                raw_id = item.get('#IMDB_ID', '')
+                if raw_id == imdb_id:
+                    continue
+                similar_movies.append({
+                    'imdb_id': raw_id,
+                    'title': item.get('#TITLE', 'Untitled'),
+                    'year': item.get('#YEAR', ''),
+                    'thumbnail': item.get('#IMG_POSTER', ''),
+                    'is_series': False,
+                })
+            random.shuffle(similar_movies)
+            return jsonify(similar_movies[:10])
         
-        # Search for similar content
+        # Search for similar content using genres
         similar_movies = []
         for genre in genres[:2]:  # Use first 2 genres
-            # Search for the appropriate content type
-            search_results = cinema_goer.search_movie(genre, results=30)
-            
-            for m in search_results:
-                # Skip the current movie/series
-                if m.movieID == clean_id:
+            raw_results = imdb_search(genre, results=20)
+            for item in raw_results:
+                raw_id = item.get('#IMDB_ID', '')
+                if raw_id == imdb_id:
                     continue
-                    
-                # For series, match with series; for movies, match with movies
-                if is_series:
-                    if not is_tv_series(m):
-                        continue
-                else:
-                    if is_tv_series(m):
-                        continue
-                        
-                # Check if already added to avoid duplicates
-                if any(sm['imdb_id'] == m.movieID for sm in similar_movies):
+                if any(sm['imdb_id'] == raw_id for sm in similar_movies):
                     continue
-                    
-                # Get a better thumbnail URL
-                cover_url = m.get('cover url', '')
-                if cover_url:
-                    cover_url = cover_url.replace('._V1_SX300', '._V1_SX600')
-                
                 similar_movies.append({
-                    'imdb_id': f"tt{m.movieID}",
-                    'title': m.get('title', 'Untitled'),
-                    'year': m.get('year', ''),
-                    'thumbnail': cover_url,
-                    'is_series': is_tv_series(m)
+                    'imdb_id': raw_id,
+                    'title': item.get('#TITLE', 'Untitled'),
+                    'year': item.get('#YEAR', ''),
+                    'thumbnail': item.get('#IMG_POSTER', ''),
+                    'is_series': False,
                 })
-
-                # Limit the number of similar movies
                 if len(similar_movies) >= 20:
                     break
 
-        # Randomize the order to provide variety
         if similar_movies:
             random.shuffle(similar_movies)
             
@@ -349,23 +465,25 @@ def watch():
         
     try:
         # Fetch movie details
-        movie = cinema_goer.get_movie(imdb_id.replace('tt', ''))
+        movie = imdb_get_movie(imdb_id)
         if not movie:
             return redirect(url_for('index'))
             
-        # Convert movie object to serializable dictionary
+        is_series = movie.get('is_series', False)
+        
+        # Convert movie dict to the format expected by the template
         movie_data = {
             'imdb_id': imdb_id,
             'title': movie.get('title', ''),
             'year': movie.get('year', ''),
-            'plot': movie.get('plot outline', movie.get('plot', [''])[0] if movie.get('plot') else ''),
+            'plot': movie.get('plot', ''),
             'rating': movie.get('rating', ''),
             'votes': movie.get('votes', ''),
-            'directors': [director['name'] for director in movie.get('directors', [])] if movie.get('directors') else [],
-            'cast': [cast['name'] for cast in movie.get('cast', [])[:5]] if movie.get('cast') else [],
+            'directors': movie.get('directors', []),
+            'cast': movie.get('cast', []),
             'genres': movie.get('genres', []),
-            'is_series': is_tv_series(movie),
-            'thumbnail': movie.get('cover url', '').replace('._V1_SX300', '._V1_SX600') if movie.get('cover url') else '',
+            'is_series': is_series,
+            'thumbnail': movie.get('thumbnail', ''),
             'current_season': request.args.get('season', '1'),
             'current_episode': request.args.get('episode', '1')
         }
@@ -419,7 +537,7 @@ def movie_page(imdb_id, slug):
             return redirect(url_for('index'))
             
         # Fetch movie details
-        movie = cinema_goer.get_movie(imdb_id.replace('tt', ''))
+        movie = imdb_get_movie(imdb_id)
         if not movie:
             return redirect(url_for('index'))
             
@@ -432,7 +550,11 @@ def movie_page(imdb_id, slug):
             
         # Update sitemap with higher priority for newer movies
         current_year = datetime.now().year
-        movie_year = int(movie.get('year', current_year))
+        movie_year_str = str(movie.get('year', current_year)).split('–')[0]
+        try:
+            movie_year = int(movie_year_str)
+        except (ValueError, TypeError):
+            movie_year = current_year
         priority = min(0.9, 0.5 + (1.0 if movie_year >= current_year else 0.0))
         
         update_sitemap_entry(imdb_id, movie.get('title', ''), movie.get('year', ''), priority)
@@ -506,7 +628,13 @@ def search():
         return render_template("search.html", movies=[])
     else:
         try:
-            movies = cinema_goer.search_movie(keyword)
+            raw_results = imdb_search(keyword, results=20)
+            movies = [{
+                'movieID': item.get('#IMDB_ID', '').replace('tt', ''),
+                'title': item.get('#TITLE', 'Untitled'),
+                'year': item.get('#YEAR', ''),
+                'thumbnail': item.get('#IMG_POSTER', ''),
+            } for item in raw_results]
             return render_template("search.html", movies=movies, keyword=keyword)
         except Exception as e:
             app.logger.error(f"Search error: {str(e)}")
@@ -524,40 +652,40 @@ def search_combined():
         return jsonify([])
     
     try:
-        # Fetch all results first
-        results = cinema_goer.search_movie(keyword, results=40)
-        print(f"Initial search returned {len(results)} results")
+        # Fetch all results first via IMDbOT API
+        raw_results = imdb_search(keyword, results=40)
+        print(f"IMDbOT returned {len(raw_results)} results")
         
-        if not results:
+        if not raw_results:
             return jsonify([])
-        
-        # Get kinds for debugging
-        kinds = {m.get('kind', 'unknown') for m in results}
-        print(f"Content kinds in search results: {kinds}")
         
         # Process results
         combined_data = []
-        for movie in results[:40]:  # Get all results for sorting later
-            cover_url = movie.get('cover url', '')
-            if cover_url:
-                cover_url = cover_url.replace('._V1_SX300', '._V1_SX600')
-            
-            # Use our helper function to detect TV series
-            is_series = is_tv_series(movie)
+        for item in raw_results:
+            raw_id = item.get('#IMDB_ID', '')
+            title = item.get('#TITLE', 'Untitled')
+            year = item.get('#YEAR', '')
+            thumbnail = item.get('#IMG_POSTER', '')
             
             movie_item = {
-                'imdb_id': movie.movieID,
-                'title': movie.get('title', 'Untitled'),
-                'year': movie.get('year', ''),
-                'thumbnail': cover_url,
-                'is_series': is_series,
-                'kind': movie.get('kind', 'unknown'),
-                'rating': movie.get('rating', 0)
+                'imdb_id': raw_id,
+                'title': title,
+                'year': year,
+                'thumbnail': thumbnail,
+                'is_series': False,
+                'kind': 'movie',
+                'rating': 0
             }
             combined_data.append(movie_item)
         
-        # Sort results: top rated first, then by year (newest first)
-        combined_data.sort(key=lambda x: (-(x.get('rating') or 0), -(x.get('year') or 0)))
+        # Sort results by year (newest first), rating not available from search endpoint
+        def get_safe_year(y):
+            try:
+                return int(str(y)[:4]) if y else 0
+            except ValueError:
+                return 0
+                
+        combined_data.sort(key=lambda x: -get_safe_year(x.get('year')))
         
         # Return the top results (limit to 20 for performance)
         print(f"Returning {min(20, len(combined_data))} combined results")
@@ -803,7 +931,7 @@ def handle_exception(e):
     traceback.print_exc()
     
     # Determine if this is a known error type
-    if isinstance(e, IMDbError):
+    if isinstance(e, http_requests.exceptions.RequestException):
         message = "Error accessing movie database. Please try again later."
         suggestion = "Check your internet connection and try again."
     elif isinstance(e, ValueError):

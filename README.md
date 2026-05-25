@@ -5,15 +5,15 @@ A modern movie and TV show streaming platform built with Flask and IMDbPY. Watch
 ## Features
 
 - 🎬 Stream movies and TV shows for free
-- 🔍 Advanced search with filters
+- 🔍 Advanced search with filters powered by OMDb API
 - 📱 Responsive design for all devices
 - 🎯 Personalized watchlist
-- 🌙 Dark/Light mode
+- 🌙 Cinematic Editorial Design (Dark & Light modes)
 - 🚀 Fast loading with caching
-- 📊 IMDb ratings and details
+- 📊 OMDb/IMDb ratings and metadata
 - 🔒 SEO optimized
 - 🛡️ Rate limiting protection
-- 🎨 Modern UI with Bootstrap 5
+- 🎨 Modern UI with Glassmorphism, Oswald & Outfit typography
 
 ## Tech Stack
 
@@ -95,7 +95,7 @@ python generate_favicons.py
 
 3. **Movie Not Found**
    - Check IMDb ID format
-   - Verify API connectivity
+   - Verify API connectivity (OMDb API)
    - Ensure valid search parameters
 
 4. **Static Files Missing**
@@ -158,10 +158,10 @@ Created by [Saurabh](https://thesaurabh.tech)
 
 ## Acknowledgements
 
-- IMDbPY for movie data
+- OMDb API for reliable movie metadata and live search
 - VidSrc for streaming
 - Flask framework
-- Bootstrap for UI
+- Bootstrap for UI structure
 - Font Awesome for icons
 
 ---

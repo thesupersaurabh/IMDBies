@@ -33,7 +33,7 @@ class Config:
     RATELIMIT_STORAGE_URL = "memory://"
     
     # Video source configuration
-    VIDSRC_BASE_URL = os.environ.get('VIDSRC_BASE_URL', "https://vidsrc.icu/")
+    VIDSRC_BASE_URL = os.environ.get('VIDSRC_BASE_URL', "https://vidsrcme.ru/")
     
     # IMDb configuration
     IMDB_CACHE_TIMEOUT = timedelta(hours=1)
